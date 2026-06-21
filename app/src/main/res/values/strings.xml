@@ -1,0 +1,270 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">کسان مددگار</string>
+    
+    <!-- Role Selection -->
+    <string name="role_selection_title">آپ کون ہیں؟</string>
+    <string name="role_selection_subtitle">استعمال کرنے کے لیے کردار کا انتخاب کریں</string>
+    <string name="role_farmer">معزز کاشتکار</string>
+    <string name="role_provider">سروس فراہم کنندہ</string>
+    <string name="role_admin">منتظم لاگ ان</string>
+    
+    <!-- Shared Auth -->
+    <string name="login_title">خوش آمدید</string>
+    <string name="login_subtitle">اپنے موبائل نمبر سے لاگ ان کریں</string>
+    <string name="phone_number_label">موبائل نمبر</string>
+    <string name="phone_number_hint">03000000000</string>
+    <string name="btn_continue">جاری رکھیں</string>
+    <string name="btn_login">لاگ ان کریں</string>
+    <string name="btn_register">رجسٹر کریں</string>
+    <string name="btn_verify">تصدیق کریں</string>
+    <string name="otp_title">تصدیقی کوڈ</string>
+    <string name="otp_subtitle">ہم نے آپ کے نمبر پر 4 ہندسوں کا کوڈ بھیجا ہے۔</string>
+    <string name="otp_hint">کوڈ درج کریں</string>
+    <string name="forgot_password">پاس ورڈ بھول گئے؟</string>
+    <string name="admin_login_title">منتظم لاگ ان</string>
+    <string name="admin_email">ای میل ایڈریس</string>
+    <string name="admin_password">پاس ورڈ</string>
+    
+    <!-- Farmer Registration -->
+    <string name="register_farmer_title">کسان رجسٹریشن</string>
+    <string name="register_name">پورا نام</string>
+    <string name="register_address">فارمنگ ایڈریس / پتہ</string>
+    
+    <!-- Provider Registration -->
+    <string name="register_provider_title">فراہم کنندہ رجسٹریشن</string>
+    <string name="register_cnic">شناختی کارڈ نمبر</string>
+    
+    <!-- Validation Errors -->
+    <string name="err_phone_invalid">براہ کرم درست موبائل نمبر درج کریں</string>
+    <string name="err_name_empty">براہ کرم اپنا نام درج کریں</string>
+    <string name="err_cnic_invalid">درست شناختی کارڈ نمبر درج کریں</string>
+    <string name="err_otp_invalid">درج کردہ او ٹی پی کوڈ غلط ہے</string>
+    <string name="err_email_invalid">براہ کرم درست ای میل درج کریں</string>
+    <string name="err_pass_empty">براہ کرم پاس ورڈ درج کریں</string>
+    
+    <!-- Main Tabs -->
+    <string name="tab_home">ہوم</string>
+    <string name="tab_search">تلاش</string>
+    <string name="tab_bookings">بکنگز</string>
+    <string name="tab_profile">پروفائل</string>
+    <string name="tab_map">نقشہ</string>
+    
+    <!-- Farmer UI -->
+    <string name="nearby_machinery">قریبی سپر سیڈر اور زرعی مشینیں</string>
+    <string name="popular_categories">مقبول زمرے</string>
+    <string name="search_machinery_hint">مشینری تلاش کریں (مثلاً ٹریکٹر)...</string>
+    <string name="hourly_rate_label">فی گھنٹہ کرایہ:</string>
+    <string name="rs_per_hour">روپے / گھنٹہ</string>
+    <string name="btn_book_now">ابھی بک کریں</string>
+    <string name="machinery_details_title">مشینری کی تفصیلات</string>
+    <string name="machinery_provider">مالک / فراہم کنندہ:</string>
+    <string name="machinery_description">تفصیلات:</string>
+    <string name="machinery_rating">درجہ بندی:</string>
+    <string name="confirm_booking_title">بکنگ کی تصدیق</string>
+    <string name="select_date">تاریخ منتخب کریں</string>
+    <string name="select_duration">دورانیہ (گھنٹے)</string>
+    <string name="total_amount">کل رقم:</string>
+    <string name="booking_success_msg">آپ کی بکنگ کامیابی سے درج کر لی گئی ہے۔ فراہم کنندہ سے جلد رابطہ کیا جائے گا۔</string>
+    
+    <!-- Categories (Urdu) -->
+    <string name="cat_tractor">ٹریکٹر</string>
+    <string name="cat_harvester">ہارویسٹر</string>
+    <string name="cat_rotavator">روٹا ویٹر</string>
+    <string name="cat_seed_drill">بیج بونے والی مشین</string>
+    <string name="cat_cultivator">ہل</string>
+    <string name="cat_sprayer">اسپریئر</string>
+    <string name="cat_thresher">تھریشر</string>
+    <string name="cat_laser_leveler">لیزر لیولر</string>
+    <string name="cat_water_tanker">پانی کا ٹینکر</string>
+    
+    <!-- Provider Dashboard -->
+    <string name="provider_dashboard">ڈیش بورڈ</string>
+    <string name="total_earnings">کل کمائی</string>
+    <string name="active_rentals">فعال رینٹلز</string>
+    <string name="pending_requests">بکنگ کی درخواستیں</string>
+    <string name="btn_add_machinery">مشینری شامل کریں</string>
+    <string name="add_machinery_title">نئی مشینری شامل کریں</string>
+    <string name="machinery_name">مشینری کا نام</string>
+    <string name="machinery_category">زمرہ منتخب کریں</string>
+    <string name="machinery_rate_input">فی گھنٹہ کرایہ (روپے)</string>
+    <string name="machinery_desc_input">مشینری کی حالت اور تفصیل</string>
+    <string name="btn_save">محفوظ کریں</string>
+    <string name="upload_photo">تصویر اپ لوڈ کریں</string>
+    
+    <!-- Admin Dashboard -->
+    <string name="admin_dashboard">منتظم کنٹرول پینل</string>
+    <string name="total_users">کل صارفین</string>
+    <string name="pending_approvals">زیر التواء منظوری</string>
+    <string name="system_logs">آڈٹ لاگز</string>
+    <string name="btn_approve">منظور کریں</string>
+    <string name="btn_reject">مسترد کریں</string>
+    
+    <!-- Phase 4 Additions & Localization -->
+    <string name="user_guest_name">کسان دوست</string>
+    <string name="welcome_alert_message">خوش آمدید، %1$s! کسان مددگار پر آپ کا خیر مقدم ہے۔</string>
+    <string name="main_tab_subtitle">اپنے کھیت کے لیے بہترین جدید ترین مشینیں بک کریں</string>
+    <string name="user_location_title">آپ کا موجودہ مقام</string>
+    <string name="hourly_rate_format">کرایہ: %1$d روپے</string>
+    <string name="gps_active_label">جی پی ایس آن ہے</string>
+    <string name="distance_rating_format">فاصلہ: %1$s کلومیٹر | درجہ بندی: %2$s</string>
+    <string name="status_available">دستیاب</string>
+    <string name="per_hour_suffix"> / گھنٹہ</string>
+    <string name="no_bookings_available">کوئی بکنگ دستیاب نہیں ہے۔</string>
+    
+    <string name="status_pending">منظوری کا انتظار</string>
+    <string name="status_accepted">منظور شدہ</string>
+    <string name="status_active">فی الحال جاری</string>
+    <string name="status_completed">مکمل</string>
+    <string name="status_rejected">مسترد شدہ</string>
+    <string name="duration_hours_format">دورانیہ: %1$d گھنٹے</string>
+    <string name="total_rent_format">کل کرایہ: %1$d روپے</string>
+    
+    <string name="label_language">زبان</string>
+    <string name="val_language_urdu">اردو</string>
+    <string name="label_role">کردار</string>
+    <string name="role_farmer_label">کسان</string>
+    <string name="btn_logout">لاگ آؤٹ کریں</string>
+    
+    <string name="label_booking_date">بکنگ کی تاریخ:</string>
+    <string name="label_booking_duration">دورانیہ (گھنٹے):</string>
+    
+    <string name="guest_bookings_title">بکنگ کی تفصیلات دیکھنے کے لیے لاگ ان کریں</string>
+    <string name="guest_bookings_desc">اپنی بکنگز کا ریکارڈ رکھنے اور فراہم کنندہ سے رابطہ کرنے کے لیے لاگ ان کرنا ضروری ہے۔</string>
+    <string name="btn_login_register">لاگ ان / رجسٹر کریں</string>
+    
+    <string name="guest_farmer_title">مہمان کسان</string>
+    <string name="guest_farmer_subtitle">لاگ ان کے بغیر محدود رسائی</string>
+    <string name="guest_farmer_desc">ایپ کا مکمل فائدہ اٹھانے کے لیے، اپنا اکاؤنٹ لاگ ان کریں یا نیا رجسٹر کریں۔ کسان مددگار پر آپ کا ڈیٹا اور بکنگز ہمیشہ محفوظ رہیں گی۔</string>
+    <string name="btn_login_create_account">لاگ ان یا اکاؤنٹ بنائیں</string>
+    <string name="btn_confirm_booking">بکنگ کی تصدیق کریں</string>
+    
+    <!-- Provider Dashboard Localization Additions -->
+    <string name="provider_dashboard_title">ڈیش بورڈ</string>
+    <string name="provider_my_machinery">میری مشینری</string>
+    <string name="provider_my_machinery_list">میری مشینری کی فہرست</string>
+    <string name="provider_guest_name">فراہم کنندہ</string>
+    <string name="provider_total_earnings">کل آمدن</string>
+    <string name="provider_earnings_dummy">27,600 روپے</string>
+    <string name="provider_active_rentals">فعال رینٹلز</string>
+    <string name="provider_one_order">1 آرڈر</string>
+    <string name="provider_completed">مکمل شدہ</string>
+    <string name="provider_eight_orders">8 آرڈرز</string>
+    <string name="provider_add_machinery">نئی مشینری شامل کریں</string>
+    <string name="provider_booking_requests">بکنگ کی درخواستیں</string>
+    <string name="provider_no_pending_requests">کوئی زیر التواء درخواست نہیں ہے۔</string>
+    <string name="provider_farmer_name">کسان: %1$s</string>
+    <string name="provider_no_machinery">آپ نے ابھی تک کوئی مشینری شامل نہیں کی ہے۔</string>
+    <string name="provider_status_pending">زیر التواء</string>
+    <string name="provider_status_approved">منظور شدہ</string>
+    <string name="provider_status_rejected">مسترد</string>
+    <string name="provider_rent_per_hour">کرایہ: %1$d روپے / گھنٹہ</string>
+    <string name="role_provider_label">سروس فراہم کنندہ</string>
+    <string name="provider_account_status">اکاؤنٹ کی حالت</string>
+    <string name="provider_status_active">فعال</string>
+    <string name="provider_hint_machinery_name">مثلاً: غازی ٹریکٹر 65 ہارس پاور</string>
+    <string name="provider_hint_machinery_rate">مثلاً: 1200</string>
+    <string name="provider_hint_machinery_desc">مشینری کی حالت بیان کریں...</string>
+    <string name="provider_label_select_category">زمرہ منتخب کریں:</string>
+    <string name="provider_btn_send_request">مشینری رجسٹریشن کی درخواست بھیجیں</string>
+    <string name="provider_err_name_empty">مشینری کا نام لازمی درج کریں</string>
+    <string name="provider_err_rate_empty">درست کرایہ درج کریں</string>
+    <string name="provider_err_desc_empty">تفصیلات درج کریں</string>
+    <!-- CommonScreens Localization -->
+    <string name="splash_subtitle">زرعی مشینری آپ کے دروازے تک</string>
+    <string name="onboarding_title_1">زرعی مشینری کی بکنگ</string>
+    <string name="onboarding_desc_1">قریبی سپر سیڈر اور زرعی مشینیں سیکنڈوں میں بک کریں اور مالک سے سیدھا رابطہ کریں۔</string>
+    <string name="onboarding_title_2">اپنی مشینری کرایہ پر دیں</string>
+    <string name="onboarding_desc_2">اپنی مشینری ایپ پر رجسٹر کریں اور گھر بیٹھے روزانہ کی کمائی بڑھائیں۔</string>
+    <string name="btn_next">اگلا</string>
+    <string name="btn_start">شروع کریں</string>
+    <string name="role_farmer_subtitle">مشینری کو کرایہ پر حاصل کرنے کے لیے</string>
+    <string name="role_provider_subtitle">مشینری کرایہ پر دینے کے لیے</string>
+    <string name="err_phone_invalid_format">درست موبائل نمبر درج کریں (مثلاً: 03001234567)</string>
+    <string name="register_prompt_text">نیا اکاؤنٹ بنانے کے لیے یہاں کلک کریں۔ </string>
+    <string name="placeholder_farmer_address">مثلاً: سرگودھا روڈ، چنیوٹ</string>
+    <string name="placeholder_cnic">3740500000000</string>
+    <string name="err_address_empty">براہ کرم اپنا پتہ درج کریں</string>
+    <string name="err_cnic_empty">شناختی کارڈ نمبر درج کریں</string>
+    <string name="otp_placeholder">او ٹی پی کوڈ درج کریں (جیسے 0000)</string>
+    <string name="err_otp_length">براہ کرم 4 ہندسوں کا کوڈ درج کریں</string>
+    <string name="demo_otp_hint">ڈیمو او ٹی پی کوڈ کے طور پر \'0000\' یا کوئی بھی 4 ہندسے درج کریں</string>
+    <string name="demo_admin_hint">ڈیمو لاگ ان: منتظم / پاس ورڈ 123</string>
+
+    <!-- Admin Dashboard Additions -->
+    <string name="admin_tab_requests">درخواستیں</string>
+    <string name="admin_tab_analytics">اعداد و شمار</string>
+    <string name="admin_tab_logs">آڈٹ لاگز</string>
+    <string name="admin_pipeline_title">زیر التواء منظوری پائپ لائن</string>
+    <string name="admin_no_pending_requests">کوئی درخواست زیر التواء نہیں ہے۔</string>
+    <string name="admin_analytics_title">ایپ اعداد و شمار</string>
+    <string name="admin_total_farmers">کل کسان</string>
+    <string name="admin_farmers_count_dummy">248 کسان</string>
+    <string name="admin_total_providers">فراہم کنندگان</string>
+    <string name="admin_providers_count_dummy">36 مالکان</string>
+    <string name="admin_total_bookings_volume">کل بکنگز سیزن والیم</string>
+    <string name="admin_bookings_count_dummy">1,840 بکنگز (مکمل)</string>
+    <string name="admin_audit_logs_title">سسٹم آڈٹ لاگز</string>
+    <string name="admin_btn_logout">منتظم لاگ آؤٹ</string>
+    <string name="admin_log_1">چوہدری اصغر علی نے مسی فرگوسن ٹریکٹر بک کر لیا۔</string>
+    <string name="admin_log_2">میاں اختر رضوان نے نئی مشینری \'بوم اسپریئر 500 لیٹر\' شامل کی۔</string>
+    <string name="admin_log_3">سید زین العابدین نے لاگ ان کیا۔</string>
+    <string name="admin_log_4">ٹریکٹر ایم ایف 385 کی بکنگ مکمل ہو گئی۔</string>
+    <string name="admin_log_5">چوہدری اصغر علی نے نئی بکنگ کی ادائیگی مکمل کی کلاؤڈ والٹ سے۔</string>
+
+    <!-- MainViewModel Strings -->
+    <string name="default_user_name">صارف</string>
+    <string name="err_invalid_otp_code">غلط او ٹی پی کوڈ</string>
+    <string name="err_registration_failed">رجسٹریشن ناکام ہو گئی</string>
+    <string name="err_invalid_credentials">غلط اسناد</string>
+
+    <!-- Phase 6 Additions -->
+    <string name="home_stats_available">دستیاب مشینیں</string>
+    <string name="home_stats_nearby">آپ کے قریب</string>
+    <string name="home_stats_bookings">آپ کی بکنگز</string>
+    <string name="provider_name_label">مالک:</string>
+    <string name="provider_phone_label">فون:</string>
+    <string name="model_year_format">ماڈل %1$d</string>
+    <string name="distance_km_format">%1$s کلومیٹر دور</string>
+    <string name="featured_super_seeder">فیچرڈ سپر سیڈر</string>
+    <string name="login_success_toast">لاگ ان کامیاب ہو گیا</string>
+    <string name="booking_success_toast">بکنگ کامیابی سے درج ہو گئی ہے</string>
+    <string name="machinery_registration_toast">مشینری رجسٹریشن کی درخواست بھیج دی گئی ہے</string>
+
+    <!-- Auth Required Screen Overlay -->
+    <string name="auth_req_title">اجازت درکار ہے</string>
+    <string name="auth_req_desc">سپلائر سے رابطہ کرنے کے لیے براہ کرم اپنا فون نمبر درج کریں۔</string>
+    <string name="auth_req_phone_label">فون نمبر</string>
+    <string name="auth_req_whatsapp">واٹس ایپ</string>
+    <string name="auth_req_sms">ایس ایم ایس</string>
+    <string name="auth_req_otp_title">او ٹی پی درج کریں</string>
+    <string name="auth_req_otp_desc">ہم نے %1$s پر او ٹی پی بھیج دیا ہے۔</string>
+    <string name="auth_req_otp_label">او ٹی پی کوڈ</string>
+    <string name="auth_req_verify_btn">تصدیق کریں</string>
+    <string name="auth_req_back_btn">واپس</string>
+
+    <!-- Government of Punjab Header Strings -->
+    <string name="gov_header_title">فیلڈ ڈائریکٹر جنرل زراعت</string>
+    <string name="gov_header_subtitle">حکومتِ پنجاب</string>
+
+    <!-- Splash Screen Additions -->
+    <string name="splash_initiative">نظامتِ اعلیٰ زراعت (فیلڈ) حکومتِ پنجاب کا ایک اقدام</string>
+    <string name="splash_project">پروجیکٹ: پنجاب کلین ائیر پروگرام (PCAP)</string>
+    <string name="splash_presents">پیش کرتے ہیں</string>
+    <!-- Farmer Auth Screen Strings -->
+    <string name="auth_req_close">بند کریں</string>
+    <string name="auth_req_success">نمبر کی تصدیق کامیابی سے ہو گئی ہے!</string>
+    <string name="auth_req_phone_error">موبائل نمبر 03 سے شروع اور 11 ہندسوں کا ہونا چاہیے</string>
+    <string name="auth_req_get_whatsapp_code">واٹس ایپ کے ذریعے کوڈ حاصل کریں</string>
+    <string name="auth_req_verify_title">نمبر کی تصدیق کریں</string>
+    <string name="auth_req_otp_desc_sent">ہم نے آپ کے نمبر پر 4 ہندسوں کا کوڈ بھیج دیا ہے۔ (ڈیفالٹ: 0000)</string>
+    <string name="auth_req_otp_length_error">او ٹی پی کوڈ 4 ہندسوں کا ہونا ضروری ہے</string>
+    <string name="auth_req_resend_code">کوڈ موصول نہیں ہوا؟ دوبارہ بھیجیں</string>
+
+    <!-- Supplier Login / OTP Screens Strings -->
+    <string name="supplier_login_title">مشین سپلائر لاگ ان</string>
+    <string name="supplier_login_cnic_req">برائے مہربانی اپنا شناختی کارڈ نمبر درج کریں</string>
+    <string name="supplier_otp_title">شناخت کی تصدیق</string>
+    <string name="supplier_name_unknown">نامعلوم</string>
+    <string name="supplier_otp_sent_desc">آپ کے رجسٹرڈ نمبر پر 4 ہندسوں کا کوڈ بھیج دیا گیا ہے</string>
+</resources>
