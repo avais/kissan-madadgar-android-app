@@ -567,7 +567,7 @@ fun GovPunjabHeader(
         Image(
             painter = painterResource(id = R.drawable.logo_punjab_gov),
             contentDescription = null,
-            modifier = Modifier.size(54.dp),
+            modifier = Modifier.size(76.dp),
             contentScale = ContentScale.Fit
         )
 
@@ -579,19 +579,19 @@ fun GovPunjabHeader(
             Text(
                 text = stringResource(id = R.string.gov_header_title),
                 color = textColor,
-                fontSize = 15.sp,
+                fontSize = 20.sp,
                 fontWeight = FontWeight.ExtraBold,
                 textAlign = TextAlign.Center,
-                lineHeight = 18.sp
+                lineHeight = 24.sp
             )
-            Spacer(modifier = Modifier.height(2.dp))
+            Spacer(modifier = Modifier.height(4.dp))
             Text(
                 text = stringResource(id = R.string.gov_header_subtitle),
                 color = subtitleColor,
-                fontSize = 12.sp,
+                fontSize = 15.sp,
                 fontWeight = FontWeight.Bold,
                 textAlign = TextAlign.Center,
-                lineHeight = 15.sp
+                lineHeight = 18.sp
             )
         }
 
@@ -599,7 +599,7 @@ fun GovPunjabHeader(
         Image(
             painter = painterResource(id = R.drawable.logo_pcap),
             contentDescription = null,
-            modifier = Modifier.size(54.dp),
+            modifier = Modifier.size(60.dp),
             contentScale = ContentScale.Fit
         )
     }

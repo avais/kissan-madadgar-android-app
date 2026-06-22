@@ -76,6 +76,7 @@ import java.util.Locale
 fun FarmerHomeScreen(
     viewModel: MainViewModel,
     onNavigateToDetail: (String) -> Unit,
+    onNavigateToBooking: (String) -> Unit,
     onLoginRedirect: () -> Unit,
     onLogout: () -> Unit
 ) {
@@ -162,8 +163,8 @@ fun FarmerHomeScreen(
         ) {
             val guestName = stringResource(id = R.string.user_guest_name)
             when (selectedTab) {
-                0 -> FarmerMainTab(viewModel, user?.fullName ?: guestName, onNavigateToDetail, onNavigateToBookings = { selectedTab = 2 })
-                1 -> FarmerSearchTab(viewModel, onNavigateToDetail)
+                0 -> FarmerMainTab(viewModel, user?.fullName ?: guestName, onNavigateToDetail, onNavigateToBooking, onNavigateToBookings = { selectedTab = 2 })
+                1 -> FarmerSearchTab(viewModel, onNavigateToDetail, onNavigateToBooking)
                 2 -> {
                     if (user == null) {
                         FarmerGuestBookingsTab(onLoginRedirect, onClose = { selectedTab = 0 })
@@ -400,6 +401,7 @@ fun FarmerMainTab(
     viewModel: MainViewModel,
     userName: String,
     onNavigateToDetail: (String) -> Unit,
+    onNavigateToBooking: (String) -> Unit,
     onNavigateToBookings: () -> Unit
 ) {
     val availableList by viewModel.availableMachinery.collectAsState()
@@ -479,7 +481,8 @@ fun FarmerMainTab(
                     machinery = machinery,
                     isAuthorized = isAuthorized,
                     viewModel = viewModel,
-                    onClick = { onNavigateToDetail(machinery.id) }
+                    onClick = { onNavigateToDetail(machinery.id) },
+                    onBookClick = { onNavigateToBooking(machinery.id) }
                 )
             }
         } else {
@@ -703,7 +706,8 @@ fun MachineryListItem(
     machinery: Machinery,
     isAuthorized: Boolean,
     viewModel: MainViewModel,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    onBookClick: () -> Unit
 ) {
     val context = LocalContext.current
     var showAuthFlow by remember { mutableStateOf(false) }
@@ -831,25 +835,28 @@ fun MachineryListItem(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
+                        // Owner Name and Details
+                        Text(
+                            text = machinery.providerName,
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = AgriGreenPrimary,
+                            maxLines = 1,
+                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                        )
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
                         // Header (Tractor Icon + Machine Title)
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(32.dp)
-                                    .clip(CircleShape)
-                                    .background(AgriGreenPrimary.copy(alpha = 0.1f)),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Agriculture,
-                                    contentDescription = null,
-                                    tint = AgriGreenPrimary,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                            }
+                            androidx.compose.foundation.Image(
+                                painter = painterResource(id = R.drawable.ic_super_seeder),
+                                contentDescription = null,
+                                modifier = Modifier.size(32.dp)
+                            )
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
                                 text = machinery.nameUr,
@@ -862,27 +869,22 @@ fun MachineryListItem(
                             )
                         }
 
-                        Spacer(modifier = Modifier.height(12.dp))
+                        Spacer(modifier = Modifier.height(8.dp))
 
-                        // Owner Name and Details
-                        Text(
-                            text = machinery.providerName,
-                            fontSize = 22.sp,
-                            fontWeight = FontWeight.ExtraBold,
-                            color = AgriGreenPrimary
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(imageVector = Icons.Default.LocationOn, contentDescription = null, tint = Color.DarkGray, modifier = Modifier.size(16.dp))
-                            Spacer(modifier = Modifier.width(4.dp))
+                            androidx.compose.foundation.Image(
+                                painter = painterResource(id = R.drawable.ic_location_round),
+                                contentDescription = null,
+                                modifier = Modifier.size(32.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
                             Text(text = stringResource(id = R.string.distance_km_format, "1.2"), color = Color.DarkGray, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
                         }
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = displayPhone,
-                            color = Color.DarkGray,
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Medium,
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
                             modifier = Modifier.clickable {
                                 if (isAuthorized) {
                                     val clipboardManager = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
@@ -899,7 +901,20 @@ fun MachineryListItem(
                                     showAuthFlow = true
                                 }
                             }
-                        )
+                        ) {
+                            androidx.compose.foundation.Image(
+                                painter = painterResource(id = R.drawable.ic_phone_round),
+                                contentDescription = null,
+                                modifier = Modifier.size(32.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = displayPhone,
+                                color = Color.DarkGray,
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
                     }
 
                     Spacer(modifier = Modifier.width(12.dp))
@@ -964,10 +979,10 @@ fun MachineryListItem(
                         Button(
                             onClick = {
                                 if (isAuthorized) {
-                                    onClick()
+                                    onBookClick()
                                 } else {
                                     pendingAction = {
-                                        onClick()
+                                        onBookClick()
                                     }
                                     showAuthFlow = true
                                 }
@@ -1021,7 +1036,8 @@ fun MachineryListItem(
 @Composable
 fun FarmerSearchTab(
     viewModel: MainViewModel,
-    onNavigateToDetail: (String) -> Unit
+    onNavigateToDetail: (String) -> Unit,
+    onNavigateToBooking: (String) -> Unit
 ) {
     var query by remember { mutableStateOf("") }
     val availableList by viewModel.availableMachinery.collectAsState()
@@ -1057,7 +1073,8 @@ fun FarmerSearchTab(
                     machinery = item,
                     isAuthorized = isAuthorized,
                     viewModel = viewModel,
-                    onClick = { onNavigateToDetail(item.id) }
+                    onClick = { onNavigateToDetail(item.id) },
+                    onBookClick = { onNavigateToBooking(item.id) }
                 )
             }
         }
@@ -1500,6 +1517,7 @@ fun BookingConfirmationScreen(
     onBack: () -> Unit
 ) {
     var machinery by remember { mutableStateOf<Machinery?>(null) }
+    var currentStep by remember { mutableStateOf(1) }
     
     // Form States
     var selectedDateMillis by remember { mutableStateOf<Long?>(null) }
@@ -1557,7 +1575,7 @@ fun BookingConfirmationScreen(
             TopAppBar(
                 title = { Text(text = "بکنگ کی تصدیق", fontWeight = FontWeight.ExtraBold) },
                 navigationIcon = {
-                    IconButton(onClick = onBack) {
+                    IconButton(onClick = { if (currentStep > 1) currentStep = 1 else onBack() }) {
                         Icon(imageVector = Icons.Default.ArrowBack, contentDescription = null)
                     }
                 }
@@ -1583,161 +1601,199 @@ fun BookingConfirmationScreen(
                         .padding(horizontal = 20.dp, vertical = 16.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
+                    // Step Progress Indicator
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        StepIndicator(step = 1, isActive = currentStep == 1, isCompleted = currentStep > 1, title = stringResource(id = R.string.booking_step_1_title))
+                        Spacer(modifier = Modifier.width(16.dp).height(2.dp).background(if (currentStep > 1) AgriGreenPrimary else Color.LightGray))
+                        StepIndicator(step = 2, isActive = currentStep == 2, isCompleted = currentStep > 2, title = stringResource(id = R.string.booking_step_2_title))
+                    }
+
                     BookingCard(title = "مشین کی معلومات") {
                         Column {
                             Text(text = item.nameUr, fontWeight = FontWeight.Bold, fontSize = 18.sp, color = AgriGreenPrimary)
                             Spacer(modifier = Modifier.height(4.dp))
-                            val rateText = "سبسڈی: 5000 روپے فی ایکڑ"
+                            val rateText = "سبسڈی: 5000 Rs. فی ایکڑ"
                             Text(text = rateText, fontSize = 14.sp, color = Color.Gray)
                         }
                     }
 
-                    BookingCard(title = "بکنگ کی تفصیلات") {
-                        DatePickerField(
-                            selectedDateMillis = selectedDateMillis,
-                            onDateSelected = { selectedDateMillis = it }
+                    if (currentStep == 1) {
+                        BookingCard(title = "بکنگ کا وقت منتخب کریں") {
+                            DatePickerField(
+                                selectedDateMillis = selectedDateMillis,
+                                onDateSelected = { selectedDateMillis = it }
+                            )
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(text = "مطلوبہ گھنٹے", fontSize = 16.sp, color = Color.DarkGray)
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    IconButton(onClick = { if (hours > 1) hours-- }) {
+                                        Icon(imageVector = Icons.Default.RemoveCircle, contentDescription = null, tint = AgriGreenPrimary)
+                                    }
+                                    Text(
+                                        text = hours.toString(), 
+                                        fontSize = 20.sp, 
+                                        fontWeight = FontWeight.ExtraBold, 
+                                        color = Color.Black,
+                                        modifier = Modifier.padding(horizontal = 16.dp)
+                                    )
+                                    IconButton(onClick = { hours++ }) {
+                                        Icon(imageVector = Icons.Default.AddCircle, contentDescription = null, tint = AgriGreenPrimary)
+                                    }
+                                }
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(24.dp))
+
+                        PrimaryButton(
+                            text = stringResource(id = R.string.btn_next),
+                            onClick = { currentStep = 2 },
+                            enabled = selectedDateMillis != null
                         )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Row(
+                        Spacer(modifier = Modifier.height(24.dp))
+
+                    } else {
+                        BookingCard(title = "ایکڑ اور رابطے کی تفصیلات") {
+                            val acresDouble = acres.toDoubleOrNull()
+                            val acresError = if (acres.isNotEmpty() && (acresDouble == null || acresDouble < 0.1 || acresDouble > 100.0)) {
+                                "براہ کرم 0.1 سے 100 کے درمیان درست ایکڑ درج کریں"
+                            } else null
+
+                            NumberInputField(
+                                value = acres,
+                                onValueChange = { acres = it },
+                                label = "ایکڑ (لازمی)",
+                                helperText = "کم از کم 0.1 اور زیادہ سے زیادہ 100 ایکڑ۔",
+                                isError = acresError != null,
+                                keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                                    keyboardType = androidx.compose.ui.text.input.KeyboardType.Decimal,
+                                    imeAction = androidx.compose.ui.text.input.ImeAction.Done
+                                ),
+                                keyboardActions = androidx.compose.foundation.text.KeyboardActions(
+                                    onDone = { focusManager.clearFocus() }
+                                )
+                            )
+                            acresError?.let { err ->
+                                Spacer(modifier = Modifier.height(4.dp))
+                                ErrorMessage(message = err)
+                            }
+
+                            Spacer(modifier = Modifier.height(12.dp))
+
+                            val maxCharLimit = 30
+                            OutlinedTextField(
+                                value = farmerName,
+                                onValueChange = { 
+                                    if (it.length <= maxCharLimit) {
+                                        farmerName = it
+                                    }
+                                },
+                                label = { Text("نام") },
+                                placeholder = { Text("اپنا نام درج کریں", color = Color.Gray) },
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(16.dp),
+                                keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                                    keyboardType = androidx.compose.ui.text.input.KeyboardType.Text,
+                                    imeAction = androidx.compose.ui.text.input.ImeAction.Done
+                                ),
+                                keyboardActions = androidx.compose.foundation.text.KeyboardActions(
+                                    onDone = { focusManager.clearFocus() }
+                                ),
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedTextColor = Color.Black,
+                                    unfocusedTextColor = Color.Black,
+                                    focusedBorderColor = AgriGreenPrimary,
+                                    unfocusedBorderColor = Color.Gray,
+                                    focusedLabelColor = AgriGreenPrimary
+                                ),
+                                supportingText = {
+                                    Text(
+                                        text = "${farmerName.length}/$maxCharLimit",
+                                        modifier = Modifier.fillMaxWidth(),
+                                        textAlign = TextAlign.End,
+                                        color = Color.Gray,
+                                        fontSize = 12.sp
+                                    )
+                                }
+                            )
+
+                            Spacer(modifier = Modifier.height(12.dp))
+
+                            OutlinedTextField(
+                                value = user?.phoneNumber ?: "",
+                                onValueChange = {},
+                                label = { Text("موبائل نمبر") },
+                                readOnly = true,
+                                enabled = false,
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(16.dp),
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    disabledTextColor = Color.Black,
+                                    disabledBorderColor = Color.Gray,
+                                    disabledLabelColor = Color.DarkGray
+                                )
+                            )
+                        }
+
+                        val displayDate = selectedDateMillis?.let {
+                            SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(Date(it))
+                        } ?: "نامعلوم"
+                        
+                        val acresValue = acres.toDoubleOrNull() ?: 0.0
+                        val total = acresValue * 5000.0
+                        
+                        val isAcresValid = acres.toDoubleOrNull() != null && acres.toDoubleOrNull()!! in 0.1..100.0
+                        val isNameValid = farmerName.trim().isNotEmpty()
+                        val isFormValid = selectedDateMillis != null && isAcresValid && isNameValid
+
+                        SummaryCard(
+                            items = listOf(
+                                "تاریخ" to displayDate,
+                                "مطلوبہ گھنٹے" to hours.toString(),
+                                "ایکڑ" to if (acresValue > 0.0) acres else "-",
+                                "کل رقم" to "${total.toInt()} Rs. (سبسڈی)"
+                            )
+                        )
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        Column(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
-                            Text(text = "مطلوبہ گھنٹے", fontSize = 16.sp, color = Color.DarkGray)
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                IconButton(onClick = { if (hours > 1) hours-- }) {
-                                    Icon(imageVector = Icons.Default.RemoveCircle, contentDescription = null, tint = AgriGreenPrimary)
-                                }
-                                Text(
-                                    text = hours.toString(), 
-                                    fontSize = 20.sp, 
-                                    fontWeight = FontWeight.ExtraBold, 
-                                    color = Color.Black,
-                                    modifier = Modifier.padding(horizontal = 16.dp)
-                                )
-                                IconButton(onClick = { hours++ }) {
-                                    Icon(imageVector = Icons.Default.AddCircle, contentDescription = null, tint = AgriGreenPrimary)
-                                }
-                            }
-                        }
-                        Spacer(modifier = Modifier.height(8.dp))
-                        val acresDouble = acres.toDoubleOrNull()
-                        val acresError = if (acres.isNotEmpty() && (acresDouble == null || acresDouble < 0.1 || acresDouble > 100.0)) {
-                            "براہ کرم 0.1 سے 100 کے درمیان درست ایکڑ درج کریں"
-                        } else null
-
-                        NumberInputField(
-                            value = acres,
-                            onValueChange = { acres = it },
-                            label = "ایکڑ (لازمی)",
-                            helperText = "کم از کم 0.1 اور زیادہ سے زیادہ 100 ایکڑ۔",
-                            isError = acresError != null,
-                            keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
-                                keyboardType = androidx.compose.ui.text.input.KeyboardType.Decimal,
-                                imeAction = androidx.compose.ui.text.input.ImeAction.Done
-                            ),
-                            keyboardActions = androidx.compose.foundation.text.KeyboardActions(
-                                onDone = { focusManager.clearFocus() }
+                            LoadingButton(
+                                text = "بکنگ کی درخواست بھیجیں",
+                                isLoading = isSubmitting,
+                                enabled = isFormValid,
+                                onClick = {
+                                    isSubmitting = true
+                                    if (farmerName.trim().isNotEmpty()) {
+                                        viewModel.updateCurrentUserName(farmerName)
+                                    }
+                                    viewModel.createBooking(item.id, selectedDateMillis!!, hours, item.hourlyRate, acresValue) {
+                                        isSubmitting = false
+                                        showSuccess = true
+                                    }
+                                },
+                                modifier = Modifier.fillMaxWidth()
                             )
-                        )
-                        acresError?.let { err ->
-                            Spacer(modifier = Modifier.height(4.dp))
-                            ErrorMessage(message = err)
-                        }
-                    }
-
-                    BookingCard(title = "رابطے کی معلومات") {
-                        val maxCharLimit = 30
-                        OutlinedTextField(
-                            value = farmerName,
-                            onValueChange = { 
-                                if (it.length <= maxCharLimit) {
-                                    farmerName = it
-                                }
-                            },
-                            label = { Text("نام") },
-                            placeholder = { Text("اپنا نام درج کریں", color = Color.Gray) },
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(16.dp),
-                            keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
-                                keyboardType = androidx.compose.ui.text.input.KeyboardType.Text,
-                                imeAction = androidx.compose.ui.text.input.ImeAction.Done
-                            ),
-                            keyboardActions = androidx.compose.foundation.text.KeyboardActions(
-                                onDone = { focusManager.clearFocus() }
-                            ),
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedTextColor = Color.Black,
-                                unfocusedTextColor = Color.Black,
-                                focusedBorderColor = AgriGreenPrimary,
-                                unfocusedBorderColor = Color.Gray,
-                                focusedLabelColor = AgriGreenPrimary
-                            ),
-                            supportingText = {
-                                Text(
-                                    text = "${farmerName.length}/$maxCharLimit",
-                                    modifier = Modifier.fillMaxWidth(),
-                                    textAlign = TextAlign.End,
-                                    color = Color.Gray,
-                                    fontSize = 12.sp
-                                )
-                            }
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        OutlinedTextField(
-                            value = user?.phoneNumber ?: "",
-                            onValueChange = {},
-                            label = { Text("موبائل نمبر") },
-                            readOnly = true,
-                            enabled = false,
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(16.dp),
-                            colors = OutlinedTextFieldDefaults.colors(
-                                disabledTextColor = Color.Black,
-                                disabledBorderColor = Color.Gray,
-                                disabledLabelColor = Color.DarkGray
+                            SecondaryButton(
+                                text = "واپس",
+                                onClick = { currentStep = 1 },
+                                modifier = Modifier.fillMaxWidth()
                             )
-                        )
-                    }
-
-                    val displayDate = selectedDateMillis?.let {
-                        SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(Date(it))
-                    } ?: "نامعلوم"
-                    
-                    val acresValue = acres.toDoubleOrNull() ?: 0.0
-                    val total = acresValue * 5000.0
-                    
-                    val isAcresValid = acres.toDoubleOrNull() != null && acres.toDoubleOrNull()!! in 0.1..100.0
-                    val isNameValid = farmerName.trim().isNotEmpty()
-                    val isFormValid = selectedDateMillis != null && isAcresValid && isNameValid
-
-                    SummaryCard(
-                        items = listOf(
-                            "تاریخ" to displayDate,
-                            "مطلوبہ گھنٹے" to hours.toString(),
-                            "ایکڑ" to if (acresValue > 0.0) acres else "-",
-                            "کل رقم" to "${total.toInt()} روپے (سبسڈی)"
-                        )
-                    )
-
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    LoadingButton(
-                        text = "بکنگ کی درخواست بھیجیں",
-                        isLoading = isSubmitting,
-                        enabled = isFormValid,
-                        onClick = {
-                            isSubmitting = true
-                            if (farmerName.trim().isNotEmpty()) {
-                                viewModel.updateCurrentUserName(farmerName)
-                            }
-                            viewModel.createBooking(item.id, selectedDateMillis!!, hours, item.hourlyRate, acresValue) {
-                                isSubmitting = false
-                                showSuccess = true
-                            }
                         }
-                    )
-                    Spacer(modifier = Modifier.height(24.dp))
+                        Spacer(modifier = Modifier.height(24.dp))
+                    }
                 }
             }
         }
@@ -2347,5 +2403,46 @@ suspend fun PointerInputScope.detectPinchZoom(onZoom: (Float) -> Unit) {
                 }
             } while (!canceled && event.changes.any { it.pressed })
         }
+    }
+}
+
+@Composable
+fun StepIndicator(step: Int, isActive: Boolean, isCompleted: Boolean, title: String) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.Center
+    ) {
+        Box(
+            modifier = Modifier
+                .size(24.dp)
+                .clip(CircleShape)
+                .background(
+                    if (isCompleted || isActive) AgriGreenPrimary else Color.LightGray
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            if (isCompleted) {
+                Icon(
+                    imageVector = Icons.Default.Check, 
+                    contentDescription = null, 
+                    tint = Color.White, 
+                    modifier = Modifier.size(14.dp)
+                )
+            } else {
+                Text(
+                    text = step.toString(), 
+                    color = Color.White, 
+                    fontWeight = FontWeight.Bold, 
+                    fontSize = 11.sp
+                )
+            }
+        }
+        Spacer(modifier = Modifier.width(6.dp))
+        Text(
+            text = title,
+            color = if (isActive) AgriGreenPrimary else Color.Gray,
+            fontWeight = if (isActive) FontWeight.Bold else FontWeight.Normal,
+            fontSize = 13.sp
+        )
     }
 }

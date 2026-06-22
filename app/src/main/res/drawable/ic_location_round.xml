@@ -1,0 +1,17 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="96dp"
+    android:height="96dp"
+    android:viewportWidth="96"
+    android:viewportHeight="96">
+
+    <!-- Background Circle -->
+    <path
+        android:fillColor="#E8F2EC"
+        android:pathData="M48,4A44,44 0 1,1 48,92A44,44 0 1,1 48,4"/>
+
+    <!-- Location Pin -->
+    <path
+        android:fillColor="#16944A"
+        android:pathData="M48,24 C37,24 28,33 28,44 C28,59 48,76 48,76 C48,76 68,59 68,44 C68,33 59,24 48,24 Z M48,51 C44.1,51 41,47.9 41,44 C41,40.1 44.1,37 48,37 C51.9,37 55,40.1 55,44 C55,47.9 51.9,51 48,51 Z"/>
+
+</vector>

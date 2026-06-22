@@ -27,7 +27,7 @@
     <string name="admin_password">پاس ورڈ</string>
     
     <!-- Farmer Registration -->
-    <string name="register_farmer_title">کسان رجسٹریشن</string>
+    <string name="register_farmer_title">معزز کاشتکار رجسٹریشن</string>
     <string name="register_name">پورا نام</string>
     <string name="register_address">فارمنگ ایڈریس / پتہ</string>
     
@@ -101,7 +101,7 @@
     <string name="btn_reject">مسترد کریں</string>
     
     <!-- Phase 4 Additions & Localization -->
-    <string name="user_guest_name">کسان دوست</string>
+    <string name="user_guest_name">معزز کاشتکار</string>
     <string name="welcome_alert_message">خوش آمدید، %1$s! کسان مددگار پر آپ کا خیر مقدم ہے۔</string>
     <string name="main_tab_subtitle">اپنے کھیت کے لیے بہترین جدید ترین مشینیں بک کریں</string>
     <string name="user_location_title">آپ کا موجودہ مقام</string>
@@ -123,7 +123,7 @@
     <string name="label_language">زبان</string>
     <string name="val_language_urdu">اردو</string>
     <string name="label_role">کردار</string>
-    <string name="role_farmer_label">کسان</string>
+    <string name="role_farmer_label">معزز کاشتکار</string>
     <string name="btn_logout">لاگ آؤٹ کریں</string>
     
     <string name="label_booking_date">بکنگ کی تاریخ:</string>
@@ -133,7 +133,7 @@
     <string name="guest_bookings_desc">اپنی بکنگز کا ریکارڈ رکھنے اور فراہم کنندہ سے رابطہ کرنے کے لیے لاگ ان کرنا ضروری ہے۔</string>
     <string name="btn_login_register">لاگ ان / رجسٹر کریں</string>
     
-    <string name="guest_farmer_title">مہمان کسان</string>
+    <string name="guest_farmer_title"> معزز کاشتکار</string>
     <string name="guest_farmer_subtitle">لاگ ان کے بغیر محدود رسائی</string>
     <string name="guest_farmer_desc">ایپ کا مکمل فائدہ اٹھانے کے لیے، اپنا اکاؤنٹ لاگ ان کریں یا نیا رجسٹر کریں۔ کسان مددگار پر آپ کا ڈیٹا اور بکنگز ہمیشہ محفوظ رہیں گی۔</string>
     <string name="btn_login_create_account">لاگ ان یا اکاؤنٹ بنائیں</string>
@@ -153,7 +153,7 @@
     <string name="provider_add_machinery">نئی مشینری شامل کریں</string>
     <string name="provider_booking_requests">بکنگ کی درخواستیں</string>
     <string name="provider_no_pending_requests">کوئی زیر التواء درخواست نہیں ہے۔</string>
-    <string name="provider_farmer_name">کسان: %1$s</string>
+    <string name="provider_farmer_name">معزز کاشتکار: %1$s</string>
     <string name="provider_no_machinery">آپ نے ابھی تک کوئی مشینری شامل نہیں کی ہے۔</string>
     <string name="provider_status_pending">زیر التواء</string>
     <string name="provider_status_approved">منظور شدہ</string>
@@ -180,7 +180,7 @@
     <string name="btn_start">شروع کریں</string>
     <string name="role_farmer_subtitle">مشینری کو کرایہ پر حاصل کرنے کے لیے</string>
     <string name="role_provider_subtitle">مشینری کرایہ پر دینے کے لیے</string>
-    <string name="err_phone_invalid_format">درست موبائل نمبر درج کریں (مثلاً: 03001234567)</string>
+    <string name="err_phone_invalid_format">درست موبائل نمبر درج کریں (مثلاً: 0300-1234567)</string>
     <string name="register_prompt_text">نیا اکاؤنٹ بنانے کے لیے یہاں کلک کریں۔ </string>
     <string name="placeholder_farmer_address">مثلاً: سرگودھا روڈ، چنیوٹ</string>
     <string name="placeholder_cnic">3740500000000</string>
@@ -198,8 +198,8 @@
     <string name="admin_pipeline_title">زیر التواء منظوری پائپ لائن</string>
     <string name="admin_no_pending_requests">کوئی درخواست زیر التواء نہیں ہے۔</string>
     <string name="admin_analytics_title">ایپ اعداد و شمار</string>
-    <string name="admin_total_farmers">کل کسان</string>
-    <string name="admin_farmers_count_dummy">248 کسان</string>
+    <string name="admin_total_farmers">کل معزز کاشتکار</string>
+    <string name="admin_farmers_count_dummy">248 معزز کاشتکار</string>
     <string name="admin_total_providers">فراہم کنندگان</string>
     <string name="admin_providers_count_dummy">36 مالکان</string>
     <string name="admin_total_bookings_volume">کل بکنگز سیزن والیم</string>
@@ -244,8 +244,8 @@
     <string name="auth_req_back_btn">واپس</string>
 
     <!-- Government of Punjab Header Strings -->
-    <string name="gov_header_title">فیلڈ ڈائریکٹر جنرل زراعت</string>
-    <string name="gov_header_subtitle">حکومتِ پنجاب</string>
+    <string name="gov_header_title">محکمہ زراعت</string>
+    <string name="gov_header_subtitle">حکومت پنجاب</string>
 
     <!-- Splash Screen Additions -->
     <string name="splash_initiative">نظامتِ اعلیٰ زراعت (فیلڈ) حکومتِ پنجاب کا ایک اقدام</string>
@@ -267,4 +267,67 @@
     <string name="supplier_otp_title">شناخت کی تصدیق</string>
     <string name="supplier_name_unknown">نامعلوم</string>
     <string name="supplier_otp_sent_desc">آپ کے رجسٹرڈ نمبر پر 4 ہندسوں کا کوڈ بھیج دیا گیا ہے</string>
+    <!-- Booking Step Wizard Strings -->
+    <string name="booking_step_1_title">بکنگ کا وقت</string>
+    <string name="booking_step_2_title">ایکڑ اور نام</string>
+
+    <!-- Booking Lifecycle Components Localized Strings -->
+    <string name="label_date">تاریخ</string>
+    <string name="label_time">وقت</string>
+    <string name="label_acres">رقبہ</string>
+    <string name="label_place">جگہ</string>
+    <string name="label_farmer">کاشتکار</string>
+    <string name="label_phone">فون</string>
+    <string name="badge_pcap">پنجاب کلین ائیر پروگرام (PCAP)</string>
+    <string name="label_request_date">تاریخِ درخواست</string>
+    <string name="acres_format">%1$s ایکڑ</string>
+    <string name="duration_hours_value">%1$d گھنٹے</string>
+
+    <!-- Booking Details and Lifecycle Stepper Strings -->
+    <string name="booking_details_title">بکنگ کی تفصیلات</string>
+    <string name="completed_steps_header">مکمل شدہ مراحل:</string>
+    <string name="responsibility_format">ذمہ داری: %1$s</string>
+    <string name="step_completed_format">%1$s مکمل ہو گیا</string>
+    
+    <string name="step_service_acquired">سروس حاصل ہوئی</string>
+    <string name="step_subsidy_started">سبسڈی شروع ہوئی</string>
+    <string name="step_work_completed">کام مکمل ہوا</string>
+    <string name="step_farmer_confirmation">معزز کاشتکار کی تصدیق</string>
+
+    <string name="role_farmer_simple">معزز کاشتکار</string>
+    <string name="role_provider_simple">سروس فراہم کرنے والا</string>
+    <string name="role_admin_simple">ایڈمن</string>
+
+    <string name="state_waiting">انتظار</string>
+    <string name="state_approved">منظور</string>
+    <string name="state_ongoing">کام جاری</string>
+    <string name="state_done">مکمل</string>
+    <string name="state_rejected">مسترد</string>
+    <string name="state_cancelled">منسوخ</string>
+    <string name="state_now">اب کریں</string>
+    <string name="state_closed">بند</string>
+
+    <!-- nextActionText strings -->
+    <string name="btn_back">واپس</string>
+    <string name="next_action_title">اب کیا کرنا ہے؟</string>
+    <string name="what_should_i_do_title">اب مجھے کیا کرنا ہے؟</string>
+    <string name="request_rejected_title">درخواست مسترد</string>
+    <string name="request_rejected_desc">یہ درخواست مسترد ہو چکی ہے۔</string>
+    <string name="action_pending_provider">درخواست دیکھیں، پھر منظور یا مسترد کریں۔</string>
+    <string name="action_pending_farmer">درخواست بھیج دی گئی ہے۔ منظوری کا انتظار کریں۔</string>
+    <string name="action_rejected">درخواست مسترد ہو چکی ہے۔ وجہ نیچے لکھی ہے۔</string>
+    <string name="action_cancelled">درخواست منسوخ ہو چکی ہے۔</string>
+    <string name="action_completed">سارا کام مکمل ہو گیا ہے۔</string>
+    <string name="action_all_steps_done">تمام تصویری مراحل مکمل ہیں۔</string>
+    <string name="action_your_turn_format">آپ کی باری ہے: %1$s کی تصویر شامل کریں۔</string>
+    <string name="action_other_turn_format">%1$s کی باری ہے: %2$s۔</string>
+
+    <!-- stepHelpText strings -->
+    <string name="help_step_completed">یہ مرحلہ مکمل ہے۔ تصویر نیچے موجود ہے۔</string>
+    <string name="help_pending">پہلے درخواست منظور ہوگی۔</string>
+    <string name="help_rejected">درخواست مسترد ہو گئی، اس لیے یہ مرحلہ بند ہے۔</string>
+    <string name="help_cancelled">درخواست منسوخ ہو گئی، اس لیے یہ مرحلہ بند ہے۔</string>
+    <string name="help_locked">پہلے اوپر والا مرحلہ مکمل ہوگا۔</string>
+    <string name="help_your_turn">یہ آپ کی باری ہے۔ تصویر شامل کریں۔</string>
+    <string name="help_other_turn_format">%1$s کی باری ہے۔</string>
 </resources>

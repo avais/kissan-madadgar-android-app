@@ -298,6 +298,9 @@ class MainActivity : ComponentActivity() {
                                     onNavigateToDetail = { machineryId ->
                                         navController.navigate(Screen.MachineryDetail.createRoute(machineryId))
                                     },
+                                    onNavigateToBooking = { machineryId ->
+                                        navController.navigate(Screen.BookingConfirmation.createRoute(machineryId))
+                                    },
                                     onLoginRedirect = {
                                         navController.navigate(Screen.FarmerLogin.route)
                                     },

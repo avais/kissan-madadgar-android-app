@@ -73,7 +73,9 @@ data class Booking(
     val locationUr: String = "مقام دستیاب نہیں",
     val acres: Double? = null,
     val rejectionReason: String? = null,
-    val lifecyclePhotos: List<BookingLifecyclePhoto> = emptyList()
+    val lifecyclePhotos: List<BookingLifecyclePhoto> = emptyList(),
+    val providerName: String = "میاں اختر رضوان",
+    val providerPhone: String = "03111234567"
 )
 
 enum class BookingStatus {

@@ -260,7 +260,9 @@ class MainViewModel @Inject constructor(
                 status = BookingStatus.PENDING,
                 createdAt = System.currentTimeMillis(),
                 locationUr = machinery.districtUr,
-                acres = acres
+                acres = acres,
+                providerName = machinery.providerName,
+                providerPhone = machinery.providerPhone
             )
             bookingRepo.createBooking(booking)
             onSuccess()

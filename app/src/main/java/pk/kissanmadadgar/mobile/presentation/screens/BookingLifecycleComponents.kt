@@ -1,5 +1,6 @@
 package pk.kissanmadadgar.mobile.presentation.screens
 
+import android.content.Context
 import android.graphics.Bitmap
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -61,6 +62,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.material3.MaterialTheme
 import pk.kissanmadadgar.mobile.core.components.AgriConfirmationDialog
+import pk.kissanmadadgar.mobile.R
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -94,6 +96,9 @@ import pk.kissanmadadgar.mobile.domain.model.UserRole
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.layout.ContentScale
 
 private val CardGray = Color(0xFFF4F5F2)
 private val BorderGray = Color(0xFFD7DDD4)
@@ -106,7 +111,7 @@ private val DisabledGray = Color(0xFF8A948C)
 
 private data class StepUi(
     val step: BookingPhotoStep,
-    val title: String,
+    val titleResId: Int,
     val role: UserRole
 )
 
@@ -610,14 +615,145 @@ fun FarmerRequestCard(
                 BookingStatusBadge(status = booking.status)
             }
 
-            // Title
-            Text(
-                text = booking.machineryName,
-                color = TextDark,
-                fontSize = 20.sp,
-                lineHeight = 26.sp,
-                fontWeight = FontWeight.ExtraBold
-            )
+            // PCAP Badge
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(Color(0xFFECF7F2))
+                        .border(BorderStroke(1.dp, Color(0xFF0B5D34).copy(alpha = 0.2f)), RoundedCornerShape(8.dp))
+                        .padding(horizontal = 10.dp, vertical = 6.dp)
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        Image(
+                            painter = painterResource(id = R.drawable.logo_pcap),
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp),
+                            contentScale = ContentScale.Fit
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = stringResource(id = R.string.badge_pcap),
+                            color = Color(0xFF0B5D34),
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+            }
+
+            // Details Column (Name, Machine Title, Location, Phone & Call Button)
+            Column(modifier = Modifier.fillMaxWidth()) {
+                // Owner Name and Details
+                Text(
+                    text = booking.providerName,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = AgriGreenPrimary,
+                    maxLines = 1,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // Header (Tractor Icon + Machine Title)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Image(
+                        painter = painterResource(id = R.drawable.ic_super_seeder),
+                        contentDescription = null,
+                        modifier = Modifier.size(32.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = booking.machineryName,
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.Black,
+                        maxLines = 1,
+                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Image(
+                        painter = painterResource(id = R.drawable.ic_location_round),
+                        contentDescription = null,
+                        modifier = Modifier.size(32.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = booking.locationUr,
+                        color = Color.DarkGray,
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        maxLines = 1,
+                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // Phone with custom icon and Call Button at the end of this Row
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Image(
+                            painter = painterResource(id = R.drawable.ic_phone_round),
+                            contentDescription = null,
+                            modifier = Modifier.size(32.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = booking.providerPhone,
+                            color = Color.DarkGray,
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+
+                    // Phone Call Icon Button (consistent solid circle style, placed after phone details)
+                    val context = LocalContext.current
+                    Box(
+                        modifier = Modifier
+                            .size(38.dp)
+                            .clip(CircleShape)
+                            .background(AgriGreenPrimary)
+                            .clickable {
+                                try {
+                                    val intent = android.content.Intent(android.content.Intent.ACTION_DIAL).apply {
+                                        data = android.net.Uri.parse("tel:${booking.providerPhone}")
+                                    }
+                                    context.startActivity(intent)
+                                } catch (e: Exception) {
+                                    e.printStackTrace()
+                                }
+                            },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Phone,
+                            contentDescription = "Call",
+                            tint = Color.White,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                }
+            }
 
             // Compact 2-column info grid
             Column(
@@ -633,34 +769,32 @@ fun FarmerRequestCard(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     TileInfoChip(
-                        label = "تاریخ",
+                        label = stringResource(id = R.string.label_date),
                         value = formatDate(booking.bookingDate),
                         modifier = Modifier.weight(1f)
                     )
-                    booking.acres?.let {
-                        TileInfoChip(
-                            label = "رقبہ",
-                            value = "${formatNumber(it)} ایکڑ",
-                            modifier = Modifier.weight(1f)
-                        )
-                    }
+                    TileInfoChip(
+                        label = stringResource(id = R.string.label_time),
+                        value = stringResource(id = R.string.duration_hours_value, booking.durationHours),
+                        modifier = Modifier.weight(1f)
+                    )
                 }
+
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     TileInfoChip(
-                        label = "وقت",
-                        value = "${booking.durationHours} گھنٹے",
+                        label = stringResource(id = R.string.label_acres),
+                        value = booking.acres?.let { stringResource(id = R.string.acres_format, formatNumber(it)) } ?: "--",
                         modifier = Modifier.weight(1f)
                     )
                     TileInfoChip(
-                        label = "رقم",
-                        value = "${formatNumber(booking.totalPrice)} Rs",
+                        label = stringResource(id = R.string.label_request_date),
+                        value = formatDate(booking.createdAt),
                         modifier = Modifier.weight(1f)
                     )
                 }
-                TileInfoRow(label = "جگہ", value = booking.locationUr)
             }
 
             if (booking.status == BookingStatus.REJECTED) {
@@ -688,6 +822,7 @@ fun BookingLifecycleCard(
     var rejectReason by remember { mutableStateOf("") }
 
     val accentColor = tileAccentColor(booking.status)
+    val context = LocalContext.current
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -719,7 +854,99 @@ fun BookingLifecycleCard(
                 fontWeight = FontWeight.ExtraBold
             )
 
-            // Compact 2-column info grid
+            if (currentRole == UserRole.FARMER) {
+                // PCAP Badge
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(Color(0xFFECF7F2))
+                            .border(BorderStroke(1.dp, Color(0xFF0B5D34).copy(alpha = 0.2f)), RoundedCornerShape(8.dp))
+                            .padding(horizontal = 10.dp, vertical = 6.dp)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            Image(
+                                painter = painterResource(id = R.drawable.logo_pcap),
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp),
+                                contentScale = ContentScale.Fit
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = "پنجاب کلین ائیر پروگرام (PCAP)",
+                                color = Color(0xFF0B5D34),
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+                }
+
+                // Service Provider Name
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Column {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text = "سروس فراہم کنندہ: ",
+                                fontSize = 14.sp,
+                                color = Color.Gray,
+                                fontWeight = FontWeight.Medium
+                            )
+                            Text(
+                                text = booking.providerName,
+                                fontSize = 16.sp,
+                                color = AgriGreenPrimary,
+                                fontWeight = FontWeight.ExtraBold
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = "فون: ${booking.providerPhone}",
+                            fontSize = 14.sp,
+                            color = Color.DarkGray,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+
+                    // Phone Call Icon Button
+                    val context = LocalContext.current
+                    IconButton(
+                        onClick = {
+                            try {
+                                val intent = android.content.Intent(android.content.Intent.ACTION_DIAL).apply {
+                                    data = android.net.Uri.parse("tel:${booking.providerPhone}")
+                                }
+                                context.startActivity(intent)
+                            } catch (e: Exception) {
+                                e.printStackTrace()
+                            }
+                        },
+                        modifier = Modifier
+                            .size(36.dp)
+                            .clip(CircleShape)
+                            .background(AgriGreenPrimary.copy(alpha = 0.1f))
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Phone,
+                            contentDescription = "Call",
+                            tint = AgriGreenPrimary,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                }
+            }
+
+            // Compact 2-column info grid (No Raqqim)
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -746,28 +973,22 @@ fun BookingLifecycleCard(
                         value = formatDate(booking.bookingDate),
                         modifier = Modifier.weight(1f)
                     )
-                    booking.acres?.let {
-                        TileInfoChip(
-                            label = "رقبہ",
-                            value = "${formatNumber(it)} ایکڑ",
-                            modifier = Modifier.weight(1f)
-                        )
-                    }
-                }
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
                     TileInfoChip(
                         label = "وقت",
                         value = "${booking.durationHours} گھنٹے",
                         modifier = Modifier.weight(1f)
                     )
-                    TileInfoChip(
-                        label = "رقم",
-                        value = "${formatNumber(booking.totalPrice)} Rs",
-                        modifier = Modifier.weight(1f)
-                    )
+                }
+                booking.acres?.let {
+                    Row(
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        TileInfoChip(
+                            label = "رقبہ",
+                            value = "${formatNumber(it)} ایکڑ",
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
                 }
                 TileInfoRow(label = "جگہ", value = booking.locationUr)
             }
@@ -783,7 +1004,7 @@ fun BookingLifecycleCard(
             }
 
             // Instruction Text
-            val nextAction = nextActionText(booking = booking, currentRole = currentRole)
+            val nextAction = nextActionText(booking = booking, currentRole = currentRole, context = context)
             if (nextAction.isNotBlank() && booking.status != BookingStatus.COMPLETED && booking.status != BookingStatus.REJECTED) {
                 Text(
                     text = "ہدایت: $nextAction",
@@ -989,6 +1210,7 @@ private fun NextActionBox(
     booking: Booking,
     currentRole: UserRole
 ) {
+    val context = LocalContext.current
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(10.dp),
@@ -1000,14 +1222,14 @@ private fun NextActionBox(
             verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
             Text(
-                text = "اب کیا کرنا ہے؟",
+                text = stringResource(id = R.string.next_action_title),
                 color = AgriGreenPrimary,
                 fontSize = 18.sp,
                 lineHeight = 24.sp,
                 fontWeight = FontWeight.Bold
             )
             Text(
-                text = nextActionText(booking = booking, currentRole = currentRole),
+                text = nextActionText(booking = booking, currentRole = currentRole, context = context),
                 color = TextDark,
                 fontSize = 18.sp,
                 lineHeight = 27.sp,
@@ -1158,6 +1380,7 @@ private fun StepCard(
     currentRole: UserRole,
     onUploadStep: (BookingPhotoStep) -> Unit
 ) {
+    val context = LocalContext.current
     val circleColor = when {
         completed -> DoneGreen
         unlocked -> ActionOrange
@@ -1219,14 +1442,14 @@ private fun StepCard(
 
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = "$number۔ ${stepUi.title}",
+                        text = "$number۔ ${stringResource(id = stepUi.titleResId)}",
                         color = TextDark,
                         fontSize = 18.sp,
                         lineHeight = 24.sp,
                         fontWeight = FontWeight.Bold
                     )
                     Text(
-                        text = "ذمہ داری: ${roleText(stepUi.role)}",
+                        text = stringResource(id = R.string.responsibility_format, roleText(stepUi.role, context)),
                         color = TextSoft,
                         fontSize = 14.sp,
                         lineHeight = 20.sp
@@ -1247,7 +1470,8 @@ private fun StepCard(
                     completed = completed,
                     unlocked = unlocked,
                     bookingStatus = bookingStatus,
-                    currentRole = currentRole
+                    currentRole = currentRole,
+                    context = context
                 ),
                 color = TextSoft,
                 fontSize = 16.sp,
@@ -1301,32 +1525,32 @@ private fun StepStateChip(
 
     when {
         completed -> {
-            label = "مکمل"
+            label = stringResource(id = R.string.state_done)
             textColor = DoneGreen
             backgroundColor = AgriGreenLight
         }
         bookingStatus == BookingStatus.REJECTED -> {
-            label = "مسترد"
+            label = stringResource(id = R.string.state_rejected)
             textColor = DangerRed
             backgroundColor = Color(0xFFFFEBEE)
         }
         bookingStatus == BookingStatus.CANCELLED -> {
-            label = "منسوخ"
+            label = stringResource(id = R.string.state_cancelled)
             textColor = DisabledGray
             backgroundColor = Color(0xFFF0F0F0)
         }
         bookingStatus == BookingStatus.PENDING -> {
-            label = "انتظار"
+            label = stringResource(id = R.string.state_waiting)
             textColor = ActionOrange
             backgroundColor = Color(0xFFFFF3E0)
         }
         unlocked -> {
-            label = "اب کریں"
+            label = stringResource(id = R.string.state_now)
             textColor = ActionOrange
             backgroundColor = Color(0xFFFFF3E0)
         }
         else -> {
-            label = "بند"
+            label = stringResource(id = R.string.state_closed)
             textColor = DisabledGray
             backgroundColor = Color(0xFFF0F0F0)
         }
@@ -1586,48 +1810,48 @@ private fun AmountRow(
 private fun lifecycleSteps(): List<StepUi> = listOf(
     StepUi(
         step = BookingPhotoStep.SERVICE_ACQUIRED,
-        title = "سروس حاصل ہوئی",
+        titleResId = R.string.step_service_acquired,
         role = UserRole.FARMER
     ),
     StepUi(
         step = BookingPhotoStep.SUBSIDY_STARTED,
-        title = "سبسڈی شروع ہوئی",
+        titleResId = R.string.step_subsidy_started,
         role = UserRole.PROVIDER
     ),
     StepUi(
         step = BookingPhotoStep.WORK_COMPLETED,
-        title = "کام مکمل ہوا",
+        titleResId = R.string.step_work_completed,
         role = UserRole.PROVIDER
     ),
     StepUi(
         step = BookingPhotoStep.FARMER_CONFIRMATION,
-        title = "کسان کی تصدیق",
+        titleResId = R.string.step_farmer_confirmation,
         role = UserRole.FARMER
     )
 )
-
 private fun nextActionText(
     booking: Booking,
-    currentRole: UserRole
+    currentRole: UserRole,
+    context: Context
 ): String {
     if (booking.status == BookingStatus.PENDING) {
         return if (currentRole == UserRole.PROVIDER) {
-            "درخواست دیکھیں، پھر منظور یا مسترد کریں۔"
+            context.getString(R.string.action_pending_provider)
         } else {
-            "درخواست بھیج دی گئی ہے۔ منظوری کا انتظار کریں۔"
+            context.getString(R.string.action_pending_farmer)
         }
     }
 
     if (booking.status == BookingStatus.REJECTED) {
-        return "درخواست مسترد ہو چکی ہے۔ وجہ نیچے لکھی ہے۔"
+        return context.getString(R.string.action_rejected)
     }
 
     if (booking.status == BookingStatus.CANCELLED) {
-        return "درخواست منسوخ ہو چکی ہے۔"
+        return context.getString(R.string.action_cancelled)
     }
 
     if (booking.status == BookingStatus.COMPLETED) {
-        return "سارا کام مکمل ہو گیا ہے۔"
+        return context.getString(R.string.action_completed)
     }
 
     val nextStep = lifecycleSteps().firstOrNull { step ->
@@ -1635,11 +1859,11 @@ private fun nextActionText(
     }
 
     return if (nextStep == null) {
-        "تمام تصویری مراحل مکمل ہیں۔"
+        context.getString(R.string.action_all_steps_done)
     } else if (currentRole == nextStep.role) {
-        "آپ کی باری ہے: ${nextStep.title} کی تصویر شامل کریں۔"
+        context.getString(R.string.action_your_turn_format, context.getString(nextStep.titleResId))
     } else {
-        "${roleText(nextStep.role)} کی باری ہے: ${nextStep.title}۔"
+        context.getString(R.string.action_other_turn_format, roleText(nextStep.role, context), context.getString(nextStep.titleResId))
     }
 }
 
@@ -1649,23 +1873,22 @@ private fun stepHelpText(
     completed: Boolean,
     unlocked: Boolean,
     bookingStatus: BookingStatus,
-    currentRole: UserRole
+    currentRole: UserRole,
+    context: Context
 ): String {
     if (completed && photo != null) {
-        return "یہ مرحلہ مکمل ہے۔ تصویر نیچے موجود ہے۔"
+        return context.getString(R.string.help_step_completed)
     }
 
     return when {
-        bookingStatus == BookingStatus.PENDING -> "پہلے درخواست منظور ہوگی۔"
-        bookingStatus == BookingStatus.REJECTED -> "درخواست مسترد ہو گئی، اس لیے یہ مرحلہ بند ہے۔"
-        bookingStatus == BookingStatus.CANCELLED -> "درخواست منسوخ ہو گئی، اس لیے یہ مرحلہ بند ہے۔"
-        !unlocked -> "پہلے اوپر والا مرحلہ مکمل ہوگا۔"
-        currentRole == stepUi.role -> "یہ آپ کی باری ہے۔ تصویر شامل کریں۔"
-        else -> "${roleText(stepUi.role)} کی باری ہے۔"
+        bookingStatus == BookingStatus.PENDING -> context.getString(R.string.help_pending)
+        bookingStatus == BookingStatus.REJECTED -> context.getString(R.string.help_rejected)
+        bookingStatus == BookingStatus.CANCELLED -> context.getString(R.string.help_cancelled)
+        !unlocked -> context.getString(R.string.help_locked)
+        currentRole == stepUi.role -> context.getString(R.string.help_your_turn)
+        else -> context.getString(R.string.help_other_turn_format, roleText(stepUi.role, context))
     }
-}
-
-private fun isStepUnlocked(
+}private fun isStepUnlocked(
     booking: Booking,
     step: BookingPhotoStep
 ): Boolean {
@@ -1692,10 +1915,10 @@ private fun statusUi(status: BookingStatus): StatusUi = when (status) {
     BookingStatus.CANCELLED -> StatusUi("منسوخ", DisabledGray, Color(0xFFF0F0F0))
 }
 
-private fun roleText(role: UserRole): String = when (role) {
-    UserRole.FARMER -> "کسان"
-    UserRole.PROVIDER -> "سروس فراہم کرنے والا"
-    UserRole.ADMIN -> "ایڈمن"
+private fun roleText(role: UserRole, context: Context): String = when (role) {
+    UserRole.FARMER -> context.getString(R.string.role_farmer_simple)
+    UserRole.PROVIDER -> context.getString(R.string.role_provider_simple)
+    UserRole.ADMIN -> context.getString(R.string.role_admin_simple)
 }
 
 private fun formatDate(timestamp: Long): String {
@@ -1843,13 +2066,13 @@ fun BookingDetailOverlay(
                 IconButton(onClick = onBack) {
                     Icon(
                         imageVector = Icons.Default.ArrowForward,
-                        contentDescription = "واپس",
+                        contentDescription = stringResource(id = R.string.btn_back),
                         tint = Color.White
                     )
                 }
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    text = "بکنگ کی تفصیلات",
+                    text = stringResource(id = R.string.booking_details_title),
                     color = Color.White,
                     fontSize = 22.sp,
                     fontWeight = FontWeight.ExtraBold
@@ -1886,14 +2109,159 @@ fun BookingDetailOverlay(
                             BookingStatusBadge(status = booking.status)
                         }
 
-                        // Title
-                        Text(
-                            text = booking.machineryName,
-                            color = TextDark,
-                            fontSize = 20.sp,
-                            lineHeight = 26.sp,
-                            fontWeight = FontWeight.ExtraBold
-                        )
+                        if (currentRole == UserRole.FARMER) {
+                            // PCAP Badge
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .background(Color(0xFFECF7F2))
+                                        .border(BorderStroke(1.dp, Color(0xFF0B5D34).copy(alpha = 0.2f)), RoundedCornerShape(8.dp))
+                                        .padding(horizontal = 10.dp, vertical = 6.dp)
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.Center
+                                    ) {
+                                        Image(
+                                            painter = painterResource(id = R.drawable.logo_pcap),
+                                            contentDescription = null,
+                                            modifier = Modifier.size(16.dp),
+                                            contentScale = ContentScale.Fit
+                                        )
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        Text(
+                                            text = stringResource(id = R.string.badge_pcap),
+                                            color = Color(0xFF0B5D34),
+                                            fontSize = 11.sp,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    }
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.height(4.dp))
+
+                            // Provider details column
+                            Column(modifier = Modifier.fillMaxWidth()) {
+                                // Owner Name
+                                Text(
+                                    text = booking.providerName,
+                                    fontSize = 18.sp,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    color = AgriGreenPrimary,
+                                    maxLines = 1,
+                                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                                )
+
+                                Spacer(modifier = Modifier.height(8.dp))
+
+                                // Machine Title
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Image(
+                                        painter = painterResource(id = R.drawable.ic_super_seeder),
+                                        contentDescription = null,
+                                        modifier = Modifier.size(32.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(
+                                        text = booking.machineryName,
+                                        fontSize = 20.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color.Black,
+                                        maxLines = 1,
+                                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                }
+
+                                Spacer(modifier = Modifier.height(8.dp))
+
+                                // Location
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Image(
+                                        painter = painterResource(id = R.drawable.ic_location_round),
+                                        contentDescription = null,
+                                        modifier = Modifier.size(32.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(
+                                        text = booking.locationUr,
+                                        color = Color.DarkGray,
+                                        fontSize = 15.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        maxLines = 1,
+                                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                                    )
+                                }
+
+                                Spacer(modifier = Modifier.height(8.dp))
+
+                                // Phone number and Call Icon row
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Image(
+                                            painter = painterResource(id = R.drawable.ic_phone_round),
+                                            contentDescription = null,
+                                            modifier = Modifier.size(32.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text(
+                                            text = booking.providerPhone,
+                                            color = Color.DarkGray,
+                                            fontSize = 16.sp,
+                                            fontWeight = FontWeight.Medium
+                                        )
+                                    }
+
+                                    // Phone Call Icon Button (consistent solid circle style, placed after phone details)
+                                    val context = LocalContext.current
+                                    Box(
+                                        modifier = Modifier
+                                            .size(38.dp)
+                                            .clip(CircleShape)
+                                            .background(AgriGreenPrimary)
+                                            .clickable {
+                                                try {
+                                                    val intent = android.content.Intent(android.content.Intent.ACTION_DIAL).apply {
+                                                        data = android.net.Uri.parse("tel:${booking.providerPhone}")
+                                                    }
+                                                    context.startActivity(intent)
+                                                } catch (e: Exception) {
+                                                    e.printStackTrace()
+                                                }
+                                            },
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Phone,
+                                            contentDescription = "Call",
+                                            tint = Color.White,
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                    }
+                                }
+                            }
+                        } else {
+                            // If provider, they just see the machinery name text at the top
+                            Text(
+                                text = booking.machineryName,
+                                color = TextDark,
+                                fontSize = 20.sp,
+                                lineHeight = 26.sp,
+                                fontWeight = FontWeight.ExtraBold
+                            )
+                        }
 
                         // Compact 2-column info grid
                         Column(
@@ -1906,9 +2274,9 @@ fun BookingDetailOverlay(
                         ) {
                             // Relevant Person Info
                             if (currentRole == UserRole.PROVIDER) {
-                                TileInfoRow(label = "کسان", value = booking.farmerName)
+                                TileInfoRow(label = stringResource(id = R.string.label_farmer), value = booking.farmerName)
                                 if (booking.farmerPhone.isNotBlank()) {
-                                    TileInfoRow(label = "فون", value = booking.farmerPhone)
+                                    TileInfoRow(label = stringResource(id = R.string.label_phone), value = booking.farmerPhone)
                                 }
                                 Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(Color(0xFFEAEAEA)))
                             }
@@ -1918,49 +2286,51 @@ fun BookingDetailOverlay(
                                 horizontalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
                                 TileInfoChip(
-                                    label = "تاریخ",
+                                    label = stringResource(id = R.string.label_date),
                                     value = formatDate(booking.bookingDate),
                                     modifier = Modifier.weight(1f)
                                 )
-                                booking.acres?.let {
-                                    TileInfoChip(
-                                        label = "رقبہ",
-                                        value = "${formatNumber(it)} ایکڑ",
-                                        modifier = Modifier.weight(1f)
-                                    )
-                                }
+                                TileInfoChip(
+                                    label = stringResource(id = R.string.label_time),
+                                    value = stringResource(id = R.string.duration_hours_value, booking.durationHours),
+                                    modifier = Modifier.weight(1f)
+                                )
                             }
+
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
                                 TileInfoChip(
-                                    label = "وقت",
-                                    value = "${booking.durationHours} گھنٹے",
+                                    label = stringResource(id = R.string.label_acres),
+                                    value = booking.acres?.let { stringResource(id = R.string.acres_format, formatNumber(it)) } ?: "--",
                                     modifier = Modifier.weight(1f)
                                 )
                                 TileInfoChip(
-                                    label = "رقم",
-                                    value = "${formatNumber(booking.totalPrice)} Rs",
+                                    label = stringResource(id = R.string.label_request_date),
+                                    value = formatDate(booking.createdAt),
                                     modifier = Modifier.weight(1f)
                                 )
                             }
-                            TileInfoRow(label = "جگہ", value = booking.locationUr)
+
+                            if (currentRole == UserRole.PROVIDER) {
+                                TileInfoRow(label = stringResource(id = R.string.label_place), value = booking.locationUr)
+                            }
                         }
 
                         // Notice if rejected
                         if (booking.status == BookingStatus.REJECTED) {
                             NoticeBox(
-                                title = "درخواست مسترد",
+                                title = stringResource(id = R.string.request_rejected_title),
                                 message = booking.rejectionReason?.takeIf { it.isNotBlank() }
-                                    ?: "یہ درخواست مسترد ہو چکی ہے۔",
+                                    ?: stringResource(id = R.string.request_rejected_desc),
                                 color = DangerRed
                             )
                         }
 
                         // "Ab mujhe kya karna hai?" section - Sleek, simple aesthetic text, NO icons!
                         if (booking.status != BookingStatus.COMPLETED && booking.status != BookingStatus.REJECTED && booking.status != BookingStatus.CANCELLED) {
-                            val nextActionText = nextActionText(booking = booking, currentRole = currentRole)
+                            val nextActionText = nextActionText(booking = booking, currentRole = currentRole, context = context)
                             if (nextActionText.isNotBlank()) {
                                 Box(
                                     modifier = Modifier
@@ -1971,7 +2341,7 @@ fun BookingDetailOverlay(
                                 ) {
                                     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                                         Text(
-                                            text = "اب مجھے کیا کرنا ہے؟",
+                                            text = stringResource(id = R.string.what_should_i_do_title),
                                             color = AgriGreenPrimary,
                                             fontSize = 15.sp,
                                             fontWeight = FontWeight.Bold
@@ -2083,7 +2453,7 @@ fun BookingDetailOverlay(
                         if (completedSteps.isNotEmpty()) {
                             Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(Color(0xFFEAEAEA)))
                             Text(
-                                text = "مکمل شدہ مراحل:",
+                                text = stringResource(id = R.string.completed_steps_header),
                                 color = TextSoft,
                                 fontSize = 14.sp,
                                 fontWeight = FontWeight.Bold
@@ -2100,13 +2470,13 @@ fun BookingDetailOverlay(
                                 ) {
                                     Column {
                                         Text(
-                                            text = "${stepUi.title} مکمل ہو گیا",
+                                            text = stringResource(id = R.string.step_completed_format, stringResource(id = stepUi.titleResId)),
                                             color = TextDark,
                                             fontSize = 15.sp,
                                             fontWeight = FontWeight.Bold
                                         )
                                         Text(
-                                            text = "ذمہ داری: ${roleText(stepUi.role)}",
+                                            text = stringResource(id = R.string.responsibility_format, roleText(stepUi.role, context)),
                                             color = TextSoft,
                                             fontSize = 12.sp
                                         )
@@ -2243,7 +2613,7 @@ fun BookingDetailOverlay(
                         Column(
                             modifier = Modifier
                                 .fillMaxSize()
-                                .padding(24.dp),
+                                .padding(horizontal = 16.dp, vertical = 24.dp),
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.SpaceBetween
                         ) {
@@ -2303,7 +2673,7 @@ fun BookingDetailOverlay(
                             ) {
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                                 ) {
                                     OutlinedButton(
                                         onClick = {
@@ -2325,7 +2695,7 @@ fun BookingDetailOverlay(
                                         border = BorderStroke(2.dp, Color.White),
                                         colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White)
                                     ) {
-                                        Text("دوبارہ کھینچیں", fontSize = 17.sp, fontWeight = FontWeight.Bold)
+                                        Text("دوبارہ کھینچیں", fontSize = 15.sp, fontWeight = FontWeight.Bold)
                                     }
 
                                     Button(
@@ -2336,7 +2706,7 @@ fun BookingDetailOverlay(
                                         shape = RoundedCornerShape(16.dp),
                                         colors = ButtonDefaults.buttonColors(containerColor = AgriGreenPrimary)
                                     ) {
-                                        Text("تصویر قبول کریں (Accept Photo)", fontSize = 17.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                                        Text("تصویر قبول کریں", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = Color.White)
                                     }
                                 }
                             }

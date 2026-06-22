@@ -1,0 +1,75 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="96dp"
+    android:height="96dp"
+    android:viewportWidth="96"
+    android:viewportHeight="96">
+
+    <!-- Background Circle -->
+    <path
+        android:fillColor="#E8F2EC"
+        android:pathData="M48,4A44,44 0 1,1 48,92A44,44 0 1,1 48,4"/>
+
+    <!-- Main Seeder Body -->
+    <path
+        android:fillColor="#16944A"
+        android:pathData="
+            M28,34
+            L58,34
+            Q62,34 64,37
+            L66,46
+            L38,46
+            L28,38
+            Z"/>
+
+    <!-- Hitch -->
+    <path
+        android:fillColor="#16944A"
+        android:pathData="
+            M24,32
+            L28,34
+            L34,44
+            L30,46
+            L22,36
+            Z"/>
+
+    <!-- Large Wheel -->
+    <path
+        android:fillColor="#16944A"
+        android:pathData="
+            M22,54
+            A8,8 0 1,1 21.9,54"/>
+
+    <path
+        android:fillColor="#E8F2EC"
+        android:pathData="
+            M22,54
+            A4,4 0 1,1 21.9,54"/>
+
+    <!-- Small Wheel -->
+    <path
+        android:fillColor="#16944A"
+        android:pathData="
+            M68,58
+            A5,5 0 1,1 67.9,58"/>
+
+    <!-- Seed Tubes -->
+    <path
+        android:strokeColor="#16944A"
+        android:strokeWidth="1.5"
+        android:fillColor="#00000000"
+        android:pathData="
+            M42,46 L42,58
+            M48,46 L48,58
+            M54,46 L54,58
+            M60,46 L60,58"/>
+
+    <!-- Tines -->
+    <path
+        android:fillColor="#16944A"
+        android:pathData="
+            M40,58 L42,64 L38,64 Z
+            M46,58 L48,64 L44,64 Z
+            M52,58 L54,64 L50,64 Z
+            M58,58 L60,64 L56,64 Z"/>
+
+</vector>
