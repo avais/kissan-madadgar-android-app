@@ -233,7 +233,7 @@
 
     <!-- Auth Required Screen Overlay -->
     <string name="auth_req_title">اجازت درکار ہے</string>
-    <string name="auth_req_desc">سپلائر سے رابطہ کرنے کے لیے براہ کرم اپنا فون نمبر درج کریں۔</string>
+    <string name="auth_req_desc">سروس فراہم کنندہ سے رابطہ کرنے کے لیے براہ کرم اپنا فون نمبر درج کریں۔</string>
     <string name="auth_req_phone_label">فون نمبر</string>
     <string name="auth_req_whatsapp">واٹس ایپ</string>
     <string name="auth_req_sms">ایس ایم ایس</string>
@@ -262,7 +262,7 @@
     <string name="auth_req_resend_code">کوڈ موصول نہیں ہوا؟ دوبارہ بھیجیں</string>
 
     <!-- Supplier Login / OTP Screens Strings -->
-    <string name="supplier_login_title">مشین سپلائر لاگ ان</string>
+    <string name="supplier_login_title">سروس فراہم کنندہ لاگ ان</string>
     <string name="supplier_login_cnic_req">برائے مہربانی اپنا شناختی کارڈ نمبر درج کریں</string>
     <string name="supplier_otp_title">شناخت کی تصدیق</string>
     <string name="supplier_name_unknown">نامعلوم</string>
@@ -298,7 +298,7 @@
     <string name="role_provider_simple">سروس فراہم کرنے والا</string>
     <string name="role_admin_simple">ایڈمن</string>
 
-    <string name="state_waiting">انتظار</string>
+    <string name="state_waiting">جدید بکنگ</string>
     <string name="state_approved">منظور</string>
     <string name="state_ongoing">کام جاری</string>
     <string name="state_done">مکمل</string>
@@ -330,4 +330,33 @@
     <string name="help_locked">پہلے اوپر والا مرحلہ مکمل ہوگا۔</string>
     <string name="help_your_turn">یہ آپ کی باری ہے۔ تصویر شامل کریں۔</string>
     <string name="help_other_turn_format">%1$s کی باری ہے۔</string>
+    <string name="btn_more_machines">اور مشینیں دیکھیں</string>
+    
+    <!-- Zarai Machine Register Karain Flow -->
+    <string name="title_zarai_machine_register">زرعی مشین رجسٹر کریں</string>
+    <string name="step_select_machine_title">زرعی مشین کا انتخاب</string>
+    <string name="step_select_machine_prompt">آپ کے پاس کون سی زرعی مشین ہے؟</string>
+    <string name="machine_super_seeder">سپر سیڈر</string>
+    <string name="machine_baler">بیلر</string>
+    <string name="machine_harvester">ہارویسٹر</string>
+    <string name="machine_others">دیگر مشینیں</string>
+    <string name="step_qty_title">مشینوں کی تعداد</string>
+    <string name="step_qty_prompt">آپ کے پاس کل کتنی مشینیں ہیں؟</string>
+    <string name="step_district_title">ضلع کا انتخاب</string>
+    <string name="step_district_prompt">اپنے ضلع کا انتخاب کریں</string>
+    <string name="step_phone_title">موبائل نمبر</string>
+    <string name="step_phone_prompt">اپنا موبائل نمبر درج کریں</string>
+    <string name="step_otp_title">او ٹی پی تصدیق</string>
+    <string name="step_otp_prompt">واٹس ایپ پر بھیجا گیا کوڈ درج کریں</string>
+    <string name="btn_get_otp">واٹس ایپ پر کوڈ حاصل کریں</string>
+    <string name="btn_submit_application">درخواست جمع کروائیں</string>
+    <string name="msg_verification_code_sent">ہم نے واٹس ایپ کے ذریعے تصدیقی کوڈ بھیج دیا ہے۔</string>
+    <string name="summary_machine">منتخب مشین: %1$s</string>
+    <string name="summary_qty">تعداد: %1$d مشینیں</string>
+    <string name="summary_district">ضلع: %1$s</string>
+    <string name="summary_phone">موبائل: %1$s</string>
+    <string name="btn_edit">تبدیل کریں</string>
+    <string name="hint_enter_custom_machine">مشین کا نام درج کریں</string>
+    <string name="err_invalid_phone">براہ کرم درست 11 ہندسوں کا موبائل نمبر درج کریں</string>
+    <string name="err_invalid_otp">براہ کرم 4 ہندسوں کا درست او ٹی پی درج کریں</string>
 </resources>

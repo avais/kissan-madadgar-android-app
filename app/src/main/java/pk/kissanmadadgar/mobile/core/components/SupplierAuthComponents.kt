@@ -517,7 +517,7 @@ fun SupplierInfoCard(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             Column {
-                Text("سپلائر کا نام", fontSize = 12.sp, color = Color.Gray)
+                Text("سروس فراہم کنندہ کا نام", fontSize = 12.sp, color = Color.Gray)
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(name, fontWeight = FontWeight.ExtraBold, fontSize = 18.sp, color = AgriGreenPrimary)
             }
@@ -581,6 +581,7 @@ fun DatePickerField(
             modifier = Modifier.fillMaxWidth(),
             enabled = false, 
             shape = RoundedCornerShape(16.dp),
+            isError = isError,
             colors = OutlinedTextFieldDefaults.colors(
                 disabledTextColor = Color.Black,
                 disabledBorderColor = if (isError) Color.Red else Color.Gray,
@@ -634,6 +635,7 @@ fun NumberInputField(
     label: String,
     helperText: String? = null,
     modifier: Modifier = Modifier,
+    textFieldModifier: Modifier = Modifier,
     isError: Boolean = false,
     keyboardOptions: androidx.compose.foundation.text.KeyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
         keyboardType = androidx.compose.ui.text.input.KeyboardType.Decimal,
@@ -650,7 +652,7 @@ fun NumberInputField(
                 }
             },
             label = { Text(label, color = if (isError) Color.Red else Color.DarkGray) },
-            modifier = Modifier.fillMaxWidth(),
+            modifier = textFieldModifier.fillMaxWidth(),
             shape = RoundedCornerShape(16.dp),
             singleLine = true,
             isError = isError,

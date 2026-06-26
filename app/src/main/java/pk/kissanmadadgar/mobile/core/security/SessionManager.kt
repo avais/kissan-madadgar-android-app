@@ -55,4 +55,12 @@ class SessionManager(context: Context) {
     fun isContactAuthorized(): Boolean {
         return prefs.getBoolean("is_contact_authorized", false)
     }
+
+    fun saveUserAddress(address: String) {
+        prefs.edit().putString("user_address", address).apply()
+    }
+
+    fun getUserAddress(): String? {
+        return prefs.getString("user_address", null)
+    }
 }

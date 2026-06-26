@@ -21,6 +21,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -30,9 +32,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import java.util.Locale
+import androidx.compose.ui.text.style.TextAlign
 import pk.kissanmadadgar.mobile.R
-import pk.kissanmadadgar.mobile.core.components.UrduButton
-import pk.kissanmadadgar.mobile.core.components.UrduTextField
+import pk.kissanmadadgar.mobile.core.components.*
 import pk.kissanmadadgar.mobile.core.theme.AgriGreenLight
 import pk.kissanmadadgar.mobile.core.theme.AgriGreenPrimary
 import pk.kissanmadadgar.mobile.domain.model.Booking
@@ -50,72 +52,87 @@ private val TextSoft = Color(0xFF4C5A50)
 fun ProviderDashboardScreen(
     viewModel: MainViewModel,
     onNavigateToAddMachinery: () -> Unit,
-    onLogout: () -> Unit
+    onLogout: () -> Unit,
+    onNavigateToFarmerHome: () -> Unit = {}
 ) {
     var selectedTab by remember { mutableStateOf(0) }
     val user by viewModel.currentUser.collectAsState()
+    var showNotificationsDialog by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
-            CenterAlignedTopAppBar(
-                title = { Text(text = "سپلائر پورٹل", color = Color.White, fontWeight = FontWeight.Bold) },
-                actions = {
-                    IconButton(
-                        onClick = { selectedTab = 2 },
-                        modifier = Modifier.padding(end = 16.dp).size(48.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.AccountCircle,
-                            contentDescription = null,
-                            tint = Color.White,
-                            modifier = Modifier.fillMaxSize()
-                        )
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = AgriGreenPrimary)
+            AgriAppHeader(
+                title = "سروس فراہم کنندہ",
+                onProfileClick = { selectedTab = 2 },
+                onBellClick = { showNotificationsDialog = true }
             )
         },
         bottomBar = {
-            NavigationBar(containerColor = AgriGreenPrimary) {
-                NavigationBarItem(
-                    selected = selectedTab == 0,
-                    onClick = { selectedTab = 0 },
-                    icon = { Icon(imageVector = Icons.Default.Dashboard, contentDescription = null) },
-                    label = { Text(text = stringResource(id = R.string.provider_dashboard_title)) },
-                    colors = NavigationBarItemDefaults.colors(
-                        selectedIconColor = AgriGreenPrimary,
-                        selectedTextColor = Color.White,
-                        indicatorColor = Color.White,
-                        unselectedIconColor = Color.White.copy(alpha = 0.7f),
-                        unselectedTextColor = Color.White.copy(alpha = 0.7f)
-                    )
+            val headerBrush = Brush.linearGradient(
+                colors = listOf(
+                    Color(0xFF0A331A), // Deepest forest green
+                    Color(0xFF15532D), // Rich dark green
+                    Color(0xFF2E9B5C), // Emerald-lime shiny stripe
+                    Color(0xFF15532D), // Rich dark green
+                    Color(0xFF0A331A)  // Deepest forest green
                 )
-                NavigationBarItem(
-                    selected = selectedTab == 1,
-                    onClick = { selectedTab = 1 },
-                    icon = { Icon(imageVector = Icons.Default.Agriculture, contentDescription = null) },
-                    label = { Text(text = stringResource(id = R.string.provider_my_machinery)) },
-                    colors = NavigationBarItemDefaults.colors(
-                        selectedIconColor = AgriGreenPrimary,
-                        selectedTextColor = Color.White,
-                        indicatorColor = Color.White,
-                        unselectedIconColor = Color.White.copy(alpha = 0.7f),
-                        unselectedTextColor = Color.White.copy(alpha = 0.7f)
-                    )
-                )
-                NavigationBarItem(
-                    selected = selectedTab == 2,
-                    onClick = { selectedTab = 2 },
-                    icon = { Icon(imageVector = Icons.Default.Person, contentDescription = null) },
-                    label = { Text(text = stringResource(id = R.string.tab_profile)) },
-                    colors = NavigationBarItemDefaults.colors(
-                        selectedIconColor = AgriGreenPrimary,
-                        selectedTextColor = Color.White,
-                        indicatorColor = Color.White,
-                        unselectedIconColor = Color.White.copy(alpha = 0.7f),
-                        unselectedTextColor = Color.White.copy(alpha = 0.7f)
-                    )
-                )
+            )
+            Surface(
+                modifier = Modifier
+                    .shadow(
+                        elevation = 12.dp,
+                        shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp),
+                        clip = true
+                    ),
+                color = Color.Transparent
+            ) {
+                Box(
+                    modifier = Modifier
+                        .background(brush = headerBrush)
+                        .fillMaxWidth()
+                ) {
+                    NavigationBar(containerColor = Color.Transparent) {
+                        NavigationBarItem(
+                            selected = selectedTab == 0,
+                            onClick = { selectedTab = 0 },
+                            icon = { Icon(imageVector = Icons.Default.Dashboard, contentDescription = null) },
+                            label = { Text(text = stringResource(id = R.string.provider_dashboard_title)) },
+                            colors = NavigationBarItemDefaults.colors(
+                                selectedIconColor = AgriGreenPrimary,
+                                selectedTextColor = Color.White,
+                                indicatorColor = Color.White,
+                                unselectedIconColor = Color.White.copy(alpha = 0.7f),
+                                unselectedTextColor = Color.White.copy(alpha = 0.7f)
+                            )
+                        )
+                        NavigationBarItem(
+                            selected = selectedTab == 1,
+                            onClick = { selectedTab = 1 },
+                            icon = { Icon(imageVector = Icons.Default.Agriculture, contentDescription = null) },
+                            label = { Text(text = stringResource(id = R.string.provider_my_machinery)) },
+                            colors = NavigationBarItemDefaults.colors(
+                                selectedIconColor = AgriGreenPrimary,
+                                selectedTextColor = Color.White,
+                                indicatorColor = Color.White,
+                                unselectedIconColor = Color.White.copy(alpha = 0.7f),
+                                unselectedTextColor = Color.White.copy(alpha = 0.7f)
+                            )
+                        )
+                        NavigationBarItem(
+                            selected = selectedTab == 2,
+                            onClick = { selectedTab = 2 },
+                            icon = { Icon(imageVector = Icons.Default.Person, contentDescription = null) },
+                            label = { Text(text = stringResource(id = R.string.tab_profile)) },
+                            colors = NavigationBarItemDefaults.colors(
+                                selectedIconColor = AgriGreenPrimary,
+                                selectedTextColor = Color.White,
+                                indicatorColor = Color.White,
+                                unselectedIconColor = Color.White.copy(alpha = 0.7f),
+                                unselectedTextColor = Color.White.copy(alpha = 0.7f)
+                            )
+                        )
+                    }
+                }
             }
         }
     ) { padding ->
@@ -129,7 +146,32 @@ fun ProviderDashboardScreen(
             when (selectedTab) {
                 0 -> ProviderHomeTab(viewModel, onNavigateToAddMachinery)
                 1 -> ProviderInventoryTab(viewModel, onNavigateToAddMachinery)
-                2 -> ProviderProfileTab(user?.fullName ?: guestName, user?.phoneNumber ?: "", onLogout)
+                2 -> {
+                    ProviderProfileTab(
+                        name = user?.fullName ?: guestName,
+                        phone = user?.phoneNumber ?: "",
+                        address = viewModel.getCurrentUserAddress(),
+                        onNameChanged = { newName ->
+                            viewModel.updateCurrentUserName(newName)
+                        },
+                        onPhoneChanged = { newPhone ->
+                            viewModel.updateCurrentUserPhone(newPhone)
+                        },
+                        onAddressChanged = { newAddress ->
+                            viewModel.updateCurrentUserAddress(newAddress)
+                        },
+                        onLogout = onLogout,
+                        onClose = { selectedTab = 0 },
+                        onSwitchToFarmer = {
+                            viewModel.switchToFarmerMode {
+                                onNavigateToFarmerHome()
+                            }
+                        }
+                    )
+                }
+            }
+            if (showNotificationsDialog) {
+                AgriNotificationsDialog(onDismissRequest = { showNotificationsDialog = false })
             }
         }
     }
@@ -174,7 +216,7 @@ fun ProviderHomeTab(
             item {
                 RequestListHeader(
                     title = "بکنگ کی درخواستیں",
-                    subtitle = "کسانوں سے آنے والی نئی بکنگز اور ان کے کام کی تفصیلات",
+                    subtitle = "کاشتکاروں سے آنے والی نئی بکنگز اور ان کے کام کی تفصیلات",
                     icon = Icons.Default.ReceiptLong
                 )
             }
@@ -229,6 +271,8 @@ fun ProviderInventoryTab(
     onNavigateToAddMachinery: () -> Unit
 ) {
     val myMachinery by viewModel.providerMachinery.collectAsState()
+    val activeCount = myMachinery.count { it.status == MachineryStatus.APPROVED }
+    val pendingCount = myMachinery.count { it.status == MachineryStatus.PENDING }
 
     Box(
         modifier = Modifier
@@ -247,6 +291,147 @@ fun ProviderInventoryTab(
                     subtitle = "آپ کی رجسٹرڈ زرعی مشینیں اور ان کے اہم اعداد و شمار",
                     icon = Icons.Default.Agriculture
                 )
+            }
+
+            item {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Card(
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(90.dp),
+                        shape = RoundedCornerShape(20.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color.White),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                        border = BorderStroke(1.dp, AgriGreenPrimary.copy(alpha = 0.15f))
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(
+                                    brush = Brush.verticalGradient(
+                                        colors = listOf(Color.White, AgriGreenPrimary.copy(alpha = 0.06f))
+                                    )
+                                )
+                                .padding(14.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.CheckCircle,
+                                contentDescription = null,
+                                tint = AgriGreenPrimary.copy(alpha = 0.05f),
+                                modifier = Modifier
+                                    .size(54.dp)
+                                    .align(Alignment.BottomEnd)
+                            )
+                            Column(
+                                modifier = Modifier.fillMaxSize(),
+                                verticalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = activeCount.toString(),
+                                        fontSize = 26.sp,
+                                        fontWeight = FontWeight.Black,
+                                        color = AgriGreenPrimary
+                                    )
+                                    Box(
+                                        modifier = Modifier
+                                            .size(24.dp)
+                                            .clip(CircleShape)
+                                            .background(AgriGreenPrimary.copy(alpha = 0.1f)),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.CheckCircle,
+                                            contentDescription = null,
+                                            tint = AgriGreenPrimary,
+                                            modifier = Modifier.size(14.dp)
+                                        )
+                                    }
+                                }
+                                Text(
+                                    text = "فعال مشینیں",
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = TextDark.copy(alpha = 0.8f)
+                                )
+                            }
+                        }
+                    }
+
+                    Card(
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(90.dp),
+                        shape = RoundedCornerShape(20.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color.White),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                        border = BorderStroke(1.dp, Color(0xFFF57C00).copy(alpha = 0.15f))
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(
+                                    brush = Brush.verticalGradient(
+                                        colors = listOf(Color.White, Color(0xFFF57C00).copy(alpha = 0.06f))
+                                    )
+                                )
+                                .padding(14.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.HourglassEmpty,
+                                contentDescription = null,
+                                tint = Color(0xFFF57C00).copy(alpha = 0.05f),
+                                modifier = Modifier
+                                    .size(54.dp)
+                                    .align(Alignment.BottomEnd)
+                            )
+                            Column(
+                                modifier = Modifier.fillMaxSize(),
+                                verticalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = pendingCount.toString(),
+                                        fontSize = 26.sp,
+                                        fontWeight = FontWeight.Black,
+                                        color = Color(0xFFF57C00)
+                                    )
+                                    Box(
+                                        modifier = Modifier
+                                            .size(24.dp)
+                                            .clip(CircleShape)
+                                            .background(Color(0xFFF57C00).copy(alpha = 0.1f)),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.HourglassEmpty,
+                                            contentDescription = null,
+                                            tint = Color(0xFFF57C00),
+                                            modifier = Modifier.size(14.dp)
+                                        )
+                                    }
+                                }
+                                Text(
+                                    text = "زیر التواء مشینیں",
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = TextDark.copy(alpha = 0.8f)
+                                )
+                            }
+                        }
+                    }
+                }
             }
 
             if (myMachinery.isEmpty()) {
@@ -300,7 +485,7 @@ fun ProviderInventoryTab(
 private fun ProviderMachineryCard(item: Machinery) {
     val context = LocalContext.current
     val imageNames = remember(item.imageUrls) {
-        item.imageUrls.ifEmpty { listOf("super_seeder") }
+        item.imageUrls.ifEmpty { listOf("super_seeder_custom") }
     }
     val (statusText, color) = when (item.status) {
         MachineryStatus.PENDING -> stringResource(id = R.string.provider_status_pending) to Color(0xFFF57C00)
@@ -322,7 +507,7 @@ private fun ProviderMachineryCard(item: Machinery) {
             ) {
                 items(imageNames) { imageName ->
                     val imageResId = context.resources.getIdentifier(imageName, "drawable", context.packageName)
-                        .takeIf { it != 0 } ?: R.drawable.super_seeder
+                        .takeIf { it != 0 } ?: R.drawable.super_seeder_custom
 
                     Image(
                         painter = painterResource(id = imageResId),
@@ -379,14 +564,6 @@ private fun ProviderMachineryCard(item: Machinery) {
                     Text(text = statusText, color = color, fontWeight = FontWeight.ExtraBold, fontSize = 12.sp)
                 }
             }
-
-            Spacer(modifier = Modifier.height(6.dp))
-            Text(
-                text = stringResource(id = R.string.provider_rent_per_hour, item.hourlyRate.toInt()),
-                fontSize = 15.sp,
-                fontWeight = FontWeight.Bold,
-                color = TextSoft
-            )
 
             Spacer(modifier = Modifier.height(14.dp))
 
@@ -479,32 +656,178 @@ private fun formatDecimal(value: Double): String {
 fun ProviderProfileTab(
     name: String,
     phone: String,
-    onLogout: () -> Unit
+    address: String,
+    onNameChanged: (String) -> Unit,
+    onPhoneChanged: (String) -> Unit,
+    onAddressChanged: (String) -> Unit,
+    onLogout: () -> Unit,
+    onClose: () -> Unit,
+    onSwitchToFarmer: () -> Unit
 ) {
+    var editableName by remember(name) { mutableStateOf(name) }
+    var editablePhone by remember(phone) { mutableStateOf(phone) }
+    var editableAddress by remember(address) { mutableStateOf(address) }
+    val maxCharLimit = 30
+    val maxPhoneLimit = 15
+
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 24.dp, vertical = 12.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Top
     ) {
-        Spacer(modifier = Modifier.height(40.dp))
-        Icon(
-            imageVector = Icons.Default.AccountCircle,
-            contentDescription = null,
-            tint = AgriGreenPrimary,
-            modifier = Modifier.size(100.dp)
-        )
-        Spacer(modifier = Modifier.height(16.dp))
-        Text(text = name, fontSize = 22.sp, fontWeight = FontWeight.Bold)
-        Text(text = phone, fontSize = 14.sp, color = Color.Gray)
-        
-        Spacer(modifier = Modifier.height(40.dp))
-        
-        Card(
+        Row(
             modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = Color.White)
+            horizontalArrangement = Arrangement.End
+        ) {
+            IconButton(onClick = onClose) {
+                Icon(
+                    imageVector = Icons.Default.Close,
+                    contentDescription = "Close",
+                    tint = Color.Gray
+                )
+            }
+        }
+
+        OutlinedTextField(
+            value = editableName,
+            onValueChange = { input ->
+                if (input.length <= maxCharLimit) {
+                    editableName = input
+                    onNameChanged(input)
+                }
+            },
+            label = { Text("فراہم کنندہ کا نام") },
+            placeholder = { Text("اپنا نام درج کریں") },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth(0.95f),
+            shape = RoundedCornerShape(16.dp),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedTextColor = Color.Black,
+                unfocusedTextColor = Color.Black,
+                focusedBorderColor = AgriGreenPrimary,
+                unfocusedBorderColor = Color.Gray,
+                focusedLabelColor = AgriGreenPrimary
+            ),
+            supportingText = {
+                Text(
+                    text = "${editableName.length}/$maxCharLimit",
+                    modifier = Modifier.fillMaxWidth(),
+                    textAlign = TextAlign.End,
+                    color = Color.Gray,
+                    fontSize = 12.sp
+                )
+            }
+        )
+
+        Spacer(modifier = Modifier.height(4.dp))
+
+        OutlinedTextField(
+            value = editablePhone,
+            onValueChange = { input ->
+                if (input.length <= maxPhoneLimit) {
+                    editablePhone = input
+                    onPhoneChanged(input)
+                }
+            },
+            label = { Text("موبائل نمبر") },
+            placeholder = { Text("اپنا موبائل نمبر درج کریں") },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth(0.95f),
+            shape = RoundedCornerShape(16.dp),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedTextColor = Color.Black,
+                unfocusedTextColor = Color.Black,
+                focusedBorderColor = AgriGreenPrimary,
+                unfocusedBorderColor = Color.Gray,
+                focusedLabelColor = AgriGreenPrimary
+            ),
+            supportingText = {
+                Text(
+                    text = "${editablePhone.length}/$maxPhoneLimit",
+                    modifier = Modifier.fillMaxWidth(),
+                    textAlign = TextAlign.End,
+                    color = Color.Gray,
+                    fontSize = 12.sp
+                )
+            }
+        )
+
+        Spacer(modifier = Modifier.height(4.dp))
+
+        OutlinedTextField(
+            value = editableAddress,
+            onValueChange = { input ->
+                editableAddress = input
+                onAddressChanged(input)
+            },
+            label = { Text("ایڈریس / پتہ (اختیاری)") },
+            placeholder = { Text("اپنا پتہ درج کریں") },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth(0.95f),
+            shape = RoundedCornerShape(16.dp),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedTextColor = Color.Black,
+                unfocusedTextColor = Color.Black,
+                focusedBorderColor = AgriGreenPrimary,
+                unfocusedBorderColor = Color.Gray,
+                focusedLabelColor = AgriGreenPrimary
+            )
+        )
+
+        Spacer(modifier = Modifier.height(20.dp))
+
+        Button(
+            onClick = onSwitchToFarmer,
+            modifier = Modifier
+                .fillMaxWidth(0.95f)
+                .heightIn(min = 50.dp),
+            shape = RoundedCornerShape(14.dp),
+            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = AgriGreenPrimary,
+                contentColor = Color.White
+            )
+        ) {
+            Text(
+                text = "کاشتکار موڈ میں تبدیل کریں",
+                fontSize = 15.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color.White,
+                textAlign = TextAlign.Center
+            )
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        UrduButton(
+            text = stringResource(id = R.string.btn_logout),
+            onClick = onLogout,
+            containerColor = Color.Red.copy(alpha = 0.85f),
+            modifier = Modifier.fillMaxWidth(0.95f).height(50.dp),
+            fontSize = 15.sp
+        )
+
+        Spacer(modifier = Modifier.height(20.dp))
+
+        Card(
+            modifier = Modifier.fillMaxWidth(0.95f),
+            colors = CardDefaults.cardColors(containerColor = Color.White),
+            border = BorderStroke(1.dp, Color(0xFFE0E0E0))
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(text = stringResource(id = R.string.label_language), fontSize = 16.sp)
+                    Text(text = stringResource(id = R.string.val_language_urdu), color = AgriGreenPrimary, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                }
+                Spacer(modifier = Modifier.height(12.dp))
+                Divider(color = Color(0xFFF5F5F5))
+                Spacer(modifier = Modifier.height(12.dp))
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween
@@ -520,18 +843,10 @@ fun ProviderProfileTab(
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Text(text = stringResource(id = R.string.provider_account_status), fontSize = 16.sp)
-                    Text(text = stringResource(id = R.string.provider_status_active), color = AgriGreenPrimary, fontWeight = FontWeight.Bold)
+                    Text(text = stringResource(id = R.string.provider_status_active), color = AgriGreenPrimary, fontWeight = FontWeight.Bold, fontSize = 16.sp)
                 }
             }
         }
-        
-        Spacer(modifier = Modifier.height(60.dp))
-        
-        UrduButton(
-            text = stringResource(id = R.string.btn_logout),
-            onClick = onLogout,
-            containerColor = Color.Red.copy(alpha = 0.85f)
-        )
     }
 }
 

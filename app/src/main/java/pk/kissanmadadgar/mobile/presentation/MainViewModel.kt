@@ -85,7 +85,7 @@ class MainViewModel @Inject constructor(
                 _currentUser.value = user
                 
                 // If it's a provider/farmer, sync repository values
-                if (authRepo is pk.kissanmadadgar.mobile.data.mock.MockAuthRepository) {
+                if (authRepo is pk.kissanmadadgar.mobile.data.mock.InMemoryAuthRepository) {
                     authRepo.setCurrentUser(user)
                 }
                 
@@ -141,7 +141,7 @@ class MainViewModel @Inject constructor(
                     sessionManager.saveUserId(updatedProvider.id)
                     sessionManager.saveUserName(updatedProvider.fullName)
                     sessionManager.saveAuthToken(updatedProvider.phoneNumber)
-                    if (authRepo is pk.kissanmadadgar.mobile.data.mock.MockAuthRepository) {
+                    if (authRepo is pk.kissanmadadgar.mobile.data.mock.InMemoryAuthRepository) {
                         authRepo.setCurrentUser(updatedProvider)
                     }
                     loadRoleSpecificData(updatedProvider.id, UserRole.PROVIDER)
@@ -225,10 +225,64 @@ class MainViewModel @Inject constructor(
                 val updated = current.copy(fullName = newName)
                 _currentUser.value = updated
                 sessionManager.saveUserName(newName)
-                if (authRepo is pk.kissanmadadgar.mobile.data.mock.MockAuthRepository) {
+                if (authRepo is pk.kissanmadadgar.mobile.data.mock.InMemoryAuthRepository) {
                     authRepo.setCurrentUser(updated)
                 }
             }
+        }
+    }
+
+    fun updateCurrentUserPhone(newPhone: String) {
+        viewModelScope.launch {
+            val current = _currentUser.value
+            if (current != null) {
+                val updated = current.copy(phoneNumber = newPhone)
+                _currentUser.value = updated
+                sessionManager.saveAuthToken(newPhone)
+                if (authRepo is pk.kissanmadadgar.mobile.data.mock.InMemoryAuthRepository) {
+                    authRepo.setCurrentUser(updated)
+                }
+            }
+        }
+    }
+
+    fun updateCurrentUserAddress(newAddress: String) {
+        sessionManager.saveUserAddress(newAddress)
+    }
+
+    fun getCurrentUserAddress(): String {
+        return sessionManager.getUserAddress() ?: ""
+    }
+
+    fun switchToProviderMode(onComplete: () -> Unit) {
+        viewModelScope.launch {
+            val current = _currentUser.value
+            if (current != null) {
+                val updated = current.copy(role = UserRole.PROVIDER)
+                _currentUser.value = updated
+                _selectedRole.value = UserRole.PROVIDER
+                sessionManager.saveUserRole(UserRole.PROVIDER)
+                if (authRepo is pk.kissanmadadgar.mobile.data.mock.InMemoryAuthRepository) {
+                    authRepo.setCurrentUser(updated)
+                }
+            }
+            onComplete()
+        }
+    }
+
+    fun switchToFarmerMode(onComplete: () -> Unit) {
+        viewModelScope.launch {
+            val current = _currentUser.value
+            if (current != null) {
+                val updated = current.copy(role = UserRole.FARMER)
+                _currentUser.value = updated
+                _selectedRole.value = UserRole.FARMER
+                sessionManager.saveUserRole(UserRole.FARMER)
+                if (authRepo is pk.kissanmadadgar.mobile.data.mock.InMemoryAuthRepository) {
+                    authRepo.setCurrentUser(updated)
+                }
+            }
+            onComplete()
         }
     }
 
@@ -293,6 +347,83 @@ class MainViewModel @Inject constructor(
                 distanceCoveredKm = 0.0
             )
             machineryRepo.addMachinery(machinery)
+            onSuccess()
+        }
+    }
+
+    fun registerFarmerMachinery(
+        machineTypes: List<String>,
+        quantity: Int,
+        district: String,
+        phoneNumber: String,
+        onSuccess: () -> Unit
+    ) {
+        viewModelScope.launch {
+            // 1. Log user in as a Service Provider with this phone number
+            val providerUser = User(
+                id = "usr_" + System.currentTimeMillis().toString().takeLast(6),
+                phoneNumber = phoneNumber,
+                fullName = "کاشتکار مالک (${district})",
+                role = UserRole.PROVIDER,
+                profileImageUrl = null,
+                isActive = true
+            )
+            _currentUser.value = providerUser
+            _selectedRole.value = UserRole.PROVIDER
+            sessionManager.saveUserRole(UserRole.PROVIDER)
+            sessionManager.saveUserId(providerUser.id)
+            sessionManager.saveUserName(providerUser.fullName)
+            sessionManager.saveAuthToken(phoneNumber)
+            sessionManager.saveUserAddress(district)
+            
+            if (authRepo is pk.kissanmadadgar.mobile.data.mock.InMemoryAuthRepository) {
+                authRepo.setCurrentUser(providerUser)
+            }
+            
+            // 2. Register quantity of each selected machinery item
+            machineTypes.forEachIndexed { typeIndex, machineType ->
+                val categoryId = when (machineType) {
+                    "سپرسیڈر", "Super Seeder" -> "cat_4"
+                    "بیلر", "Baler" -> "cat_3"
+                    "ہارویسٹر", "Harvester" -> "cat_2"
+                    else -> "cat_1"
+                }
+
+                for (i in 1..quantity) {
+                    val suffix = if (quantity > 1) " $i" else ""
+                    val machinery = Machinery(
+                        id = "mach_" + System.currentTimeMillis().toString().takeLast(6) + "_${typeIndex}_$i",
+                        providerId = providerUser.id,
+                        providerName = providerUser.fullName,
+                        providerPhone = phoneNumber,
+                        categoryId = categoryId,
+                        nameUr = "$machineType$suffix",
+                        descriptionUr = "رابطہ نمبر: $phoneNumber۔ کسان رجسٹریشن کے تحت رجسٹرڈ شدہ مشینری۔",
+                        modelYear = 2026,
+                        hourlyRate = when (machineType) {
+                            "سپرسیڈر", "Super Seeder" -> 2200.0
+                            "بیلر", "Baler" -> 1800.0
+                            "ہارویسٹر", "Harvester" -> 3500.0
+                            else -> 1500.0
+                        },
+                        latitude = _userLocation.value.first + (i * 0.001) + (typeIndex * 0.001),
+                        longitude = _userLocation.value.second + (i * 0.001) + (typeIndex * 0.001),
+                        isAvailable = true,
+                        status = MachineryStatus.APPROVED, // Approved directly for farmer convenience demo
+                        imageUrls = when (machineType) {
+                            "سپرسیڈر", "Super Seeder" -> listOf("seeder_main_1", "seeder_main_2", "seeder_main_3", "seeder_main_4")
+                            else -> emptyList()
+                        },
+                        rating = 5.0,
+                        acresDone = 0.0,
+                        distanceCoveredKm = 0.0,
+                        districtUr = district
+                    )
+                    machineryRepo.addMachinery(machinery)
+                }
+            }
+            
+            loadRoleSpecificData(providerUser.id, UserRole.PROVIDER)
             onSuccess()
         }
     }

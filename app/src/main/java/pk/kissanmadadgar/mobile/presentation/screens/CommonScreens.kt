@@ -294,8 +294,8 @@ fun OnboardingScreen(
                         Text(
                             text = stringResource(id = R.string.onboarding_desc_1),
                             fontSize = 20.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color(0xFF1E1E1E),
+                            fontWeight = FontWeight.Medium,
+                            color = Color(0xFF4C5A50),
                             textAlign = TextAlign.Center,
                             lineHeight = 30.sp,
                             modifier = Modifier.padding(horizontal = 12.dp)
@@ -312,8 +312,8 @@ fun OnboardingScreen(
                         Text(
                             text = stringResource(id = R.string.onboarding_desc_2),
                             fontSize = 20.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color(0xFF1E1E1E),
+                            fontWeight = FontWeight.Medium,
+                            color = Color(0xFF4C5A50),
                             textAlign = TextAlign.Center,
                             lineHeight = 30.sp,
                             modifier = Modifier.padding(horizontal = 12.dp)

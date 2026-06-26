@@ -10,7 +10,9 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
+import kotlinx.coroutines.launch
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -56,6 +58,7 @@ import pk.kissanmadadgar.mobile.R
 import pk.kissanmadadgar.mobile.core.components.UrduButton
 import pk.kissanmadadgar.mobile.core.components.UrduTextField
 import pk.kissanmadadgar.mobile.core.components.AutoDismissAlert
+import pk.kissanmadadgar.mobile.core.components.AgriDetailHeader
 import pk.kissanmadadgar.mobile.core.components.*
 import androidx.compose.foundation.BorderStroke
 import pk.kissanmadadgar.mobile.core.theme.AgriGreenLight
@@ -78,80 +81,101 @@ fun FarmerHomeScreen(
     onNavigateToDetail: (String) -> Unit,
     onNavigateToBooking: (String) -> Unit,
     onLoginRedirect: () -> Unit,
-    onLogout: () -> Unit
+    onLogout: () -> Unit,
+    onNavigateToProviderDashboard: () -> Unit = {},
+    onNavigateToRegisterMachinery: () -> Unit = {}
 ) {
     var selectedTab by remember { mutableStateOf(0) }
     val user by viewModel.currentUser.collectAsState()
+    var showNotificationsDialog by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
-            CenterAlignedTopAppBar(
-                title = { Text(text = stringResource(id = R.string.app_name), color = Color.White, fontWeight = FontWeight.Bold) },
-                actions = {
-                    IconButton(
-                        onClick = { selectedTab = 3 },
-                        modifier = Modifier.padding(end = 16.dp).size(48.dp)
-                    ) {
-                        Icon(imageVector = Icons.Default.AccountCircle, contentDescription = null, tint = Color.White, modifier = Modifier.fillMaxSize())
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = AgriGreenPrimary)
+            AgriAppHeader(
+                title = stringResource(id = R.string.app_name),
+                onProfileClick = { selectedTab = 3 },
+                onBellClick = { showNotificationsDialog = true }
             )
         },
         bottomBar = {
-            NavigationBar(containerColor = AgriGreenPrimary) {
-                NavigationBarItem(
-                    selected = selectedTab == 0,
-                    onClick = { selectedTab = 0 },
-                    icon = { Icon(imageVector = Icons.Default.Home, contentDescription = null) },
-                    label = { Text(text = stringResource(id = R.string.tab_home)) },
-                    colors = NavigationBarItemDefaults.colors(
-                        selectedIconColor = AgriGreenPrimary,
-                        selectedTextColor = Color.White,
-                        indicatorColor = Color.White,
-                        unselectedIconColor = Color.White.copy(alpha = 0.7f),
-                        unselectedTextColor = Color.White.copy(alpha = 0.7f)
-                    )
+            val headerBrush = Brush.linearGradient(
+                colors = listOf(
+                    Color(0xFF0A331A), // Deepest forest green
+                    Color(0xFF15532D), // Rich dark green
+                    Color(0xFF2E9B5C), // Emerald-lime shiny stripe
+                    Color(0xFF15532D), // Rich dark green
+                    Color(0xFF0A331A)  // Deepest forest green
                 )
-                NavigationBarItem(
-                    selected = selectedTab == 1,
-                    onClick = { selectedTab = 1 },
-                    icon = { Icon(imageVector = Icons.Default.Search, contentDescription = null) },
-                    label = { Text(text = stringResource(id = R.string.tab_search)) },
-                    colors = NavigationBarItemDefaults.colors(
-                        selectedIconColor = AgriGreenPrimary,
-                        selectedTextColor = Color.White,
-                        indicatorColor = Color.White,
-                        unselectedIconColor = Color.White.copy(alpha = 0.7f),
-                        unselectedTextColor = Color.White.copy(alpha = 0.7f)
-                    )
-                )
-                NavigationBarItem(
-                    selected = selectedTab == 2,
-                    onClick = { selectedTab = 2 },
-                    icon = { Icon(imageVector = Icons.Default.List, contentDescription = null) },
-                    label = { Text(text = stringResource(id = R.string.tab_bookings)) },
-                    colors = NavigationBarItemDefaults.colors(
-                        selectedIconColor = AgriGreenPrimary,
-                        selectedTextColor = Color.White,
-                        indicatorColor = Color.White,
-                        unselectedIconColor = Color.White.copy(alpha = 0.7f),
-                        unselectedTextColor = Color.White.copy(alpha = 0.7f)
-                    )
-                )
-                NavigationBarItem(
-                    selected = selectedTab == 3,
-                    onClick = { selectedTab = 3 },
-                    icon = { Icon(imageVector = Icons.Default.Person, contentDescription = null) },
-                    label = { Text(text = stringResource(id = R.string.tab_profile)) },
-                    colors = NavigationBarItemDefaults.colors(
-                        selectedIconColor = AgriGreenPrimary,
-                        selectedTextColor = Color.White,
-                        indicatorColor = Color.White,
-                        unselectedIconColor = Color.White.copy(alpha = 0.7f),
-                        unselectedTextColor = Color.White.copy(alpha = 0.7f)
-                    )
-                )
+            )
+            Surface(
+                modifier = Modifier
+                    .shadow(
+                        elevation = 12.dp,
+                        shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp),
+                        clip = true
+                    ),
+                color = Color.Transparent
+            ) {
+                Box(
+                    modifier = Modifier
+                        .background(brush = headerBrush)
+                        .fillMaxWidth()
+                ) {
+                    NavigationBar(containerColor = Color.Transparent) {
+                        NavigationBarItem(
+                            selected = selectedTab == 0,
+                            onClick = { selectedTab = 0 },
+                            icon = { Icon(imageVector = Icons.Default.Home, contentDescription = null) },
+                            label = { Text(text = stringResource(id = R.string.tab_home)) },
+                            colors = NavigationBarItemDefaults.colors(
+                                selectedIconColor = AgriGreenPrimary,
+                                selectedTextColor = Color.White,
+                                indicatorColor = Color.White,
+                                unselectedIconColor = Color.White.copy(alpha = 0.7f),
+                                unselectedTextColor = Color.White.copy(alpha = 0.7f)
+                            )
+                        )
+                        NavigationBarItem(
+                            selected = selectedTab == 1,
+                            onClick = { selectedTab = 1 },
+                            icon = { Icon(imageVector = Icons.Default.Search, contentDescription = null) },
+                            label = { Text(text = stringResource(id = R.string.tab_search)) },
+                            colors = NavigationBarItemDefaults.colors(
+                                selectedIconColor = AgriGreenPrimary,
+                                selectedTextColor = Color.White,
+                                indicatorColor = Color.White,
+                                unselectedIconColor = Color.White.copy(alpha = 0.7f),
+                                unselectedTextColor = Color.White.copy(alpha = 0.7f)
+                            )
+                        )
+                        NavigationBarItem(
+                            selected = selectedTab == 2,
+                            onClick = { selectedTab = 2 },
+                            icon = { Icon(imageVector = Icons.Default.List, contentDescription = null) },
+                            label = { Text(text = stringResource(id = R.string.tab_bookings)) },
+                            colors = NavigationBarItemDefaults.colors(
+                                selectedIconColor = AgriGreenPrimary,
+                                selectedTextColor = Color.White,
+                                indicatorColor = Color.White,
+                                unselectedIconColor = Color.White.copy(alpha = 0.7f),
+                                unselectedTextColor = Color.White.copy(alpha = 0.7f)
+                            )
+                        )
+                        NavigationBarItem(
+                            selected = selectedTab == 3,
+                            onClick = { selectedTab = 3 },
+                            icon = { Icon(imageVector = Icons.Default.Person, contentDescription = null) },
+                            label = { Text(text = stringResource(id = R.string.tab_profile)) },
+                            colors = NavigationBarItemDefaults.colors(
+                                selectedIconColor = AgriGreenPrimary,
+                                selectedTextColor = Color.White,
+                                indicatorColor = Color.White,
+                                unselectedIconColor = Color.White.copy(alpha = 0.7f),
+                                unselectedTextColor = Color.White.copy(alpha = 0.7f)
+                            )
+                        )
+                    }
+                }
             }
         }
     ) { padding ->
@@ -163,7 +187,16 @@ fun FarmerHomeScreen(
         ) {
             val guestName = stringResource(id = R.string.user_guest_name)
             when (selectedTab) {
-                0 -> FarmerMainTab(viewModel, user?.fullName ?: guestName, onNavigateToDetail, onNavigateToBooking, onNavigateToBookings = { selectedTab = 2 })
+                0 -> FarmerMainTab(
+                    viewModel = viewModel,
+                    userName = user?.fullName ?: guestName,
+                    onNavigateToDetail = onNavigateToDetail,
+                    onNavigateToBooking = onNavigateToBooking,
+                    onNavigateToBookings = { selectedTab = 2 },
+                    onViewAllClick = { selectedTab = 1 },
+                    onNavigateToProfile = { selectedTab = 3 },
+                    onNavigateToRegisterMachinery = onNavigateToRegisterMachinery
+                )
                 1 -> FarmerSearchTab(viewModel, onNavigateToDetail, onNavigateToBooking)
                 2 -> {
                     if (user == null) {
@@ -179,20 +212,59 @@ fun FarmerHomeScreen(
                         FarmerProfileTab(
                             name = user?.fullName ?: guestName,
                             phone = user?.phoneNumber ?: "",
+                            address = viewModel.getCurrentUserAddress(),
                             onNameChanged = { newName ->
                                 viewModel.updateCurrentUserName(newName)
                             },
-                            onLogout = onLogout
+                            onPhoneChanged = { newPhone ->
+                                viewModel.updateCurrentUserPhone(newPhone)
+                            },
+                            onAddressChanged = { newAddress ->
+                                viewModel.updateCurrentUserAddress(newAddress)
+                            },
+                            onLogout = onLogout,
+                            onClose = { selectedTab = 0 },
+                            onSwitchToProvider = {
+                                viewModel.switchToProviderMode {
+                                    onNavigateToProviderDashboard()
+                                }
+                            }
                         )
                     }
                 }
+            }
+            if (showNotificationsDialog) {
+                AgriNotificationsDialog(onDismissRequest = { showNotificationsDialog = false })
             }
         }
     }
 }
 
 @Composable
-fun WelcomeHeader(userName: String) {
+fun WelcomeHeader(userName: String, lat: Double? = null, lng: Double? = null) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    var locationText by remember { mutableStateOf("") }
+
+    LaunchedEffect(lat, lng) {
+        if (lat != null && lng != null) {
+            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                try {
+                    val geocoder = android.location.Geocoder(context, java.util.Locale("ur"))
+                    val addresses = geocoder.getFromLocation(lat, lng, 1)
+                    if (!addresses.isNullOrEmpty()) {
+                        val address = addresses[0]
+                        val city = address.locality ?: address.subAdminArea ?: address.adminArea
+                        if (city != null) {
+                            locationText = " ($city)"
+                        }
+                    }
+                } catch (e: Exception) {
+                    // Ignore, keep empty
+                }
+            }
+        }
+    }
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -229,7 +301,7 @@ fun WelcomeHeader(userName: String) {
 
             Column(modifier = Modifier.fillMaxWidth()) {
                 Text(
-                    text = "خوش آمدید، $userName!",
+                    text = "خوش آمدید، $userName$locationText!",
                     color = Color.White,
                     fontSize = 21.sp,
                     fontWeight = FontWeight.Black,
@@ -303,9 +375,9 @@ fun AgriHomeStatCard(
                 contentDescription = null,
                 tint = watermarkColor,
                 modifier = Modifier
-                    .size(56.dp)
+                    .size(72.dp)
                     .align(Alignment.BottomEnd)
-                    .offset(x = 6.dp, y = 6.dp)
+                    .offset(x = 8.dp, y = 8.dp)
             )
 
             Column(
@@ -328,7 +400,7 @@ fun AgriHomeStatCard(
 
                     Box(
                         modifier = Modifier
-                            .size(26.dp)
+                            .size(36.dp)
                             .clip(CircleShape)
                             .background(badgeBgColor),
                         contentAlignment = Alignment.Center
@@ -337,7 +409,7 @@ fun AgriHomeStatCard(
                             imageVector = icon,
                             contentDescription = null,
                             tint = badgeIconColor,
-                            modifier = Modifier.size(15.dp)
+                            modifier = Modifier.size(22.dp)
                         )
                     }
                 }
@@ -367,7 +439,7 @@ fun FeaturedMachineryCard(machinery: Machinery, onClick: () -> Unit) {
     ) {
         Column {
             androidx.compose.foundation.Image(
-                painter = androidx.compose.ui.res.painterResource(id = R.drawable.super_seeder),
+                painter = androidx.compose.ui.res.painterResource(id = R.drawable.super_seeder_custom),
                 contentDescription = null,
                 modifier = Modifier.fillMaxWidth().height(160.dp),
                 contentScale = androidx.compose.ui.layout.ContentScale.Crop
@@ -397,12 +469,122 @@ fun FeaturedMachineryCard(machinery: Machinery, onClick: () -> Unit) {
 }
 
 @Composable
+fun ActionTileCard(
+    title: String,
+    subtitle: String,
+    icon: ImageVector,
+    color: Color,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier
+            .height(130.dp)
+            .clickable { onClick() }
+            .shadow(elevation = 2.dp, shape = RoundedCornerShape(20.dp)),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        border = BorderStroke(1.dp, color.copy(alpha = 0.15f))
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(
+                    brush = Brush.verticalGradient(
+                        colors = listOf(Color.White, color.copy(alpha = 0.05f))
+                    )
+                )
+                .padding(14.dp)
+        ) {
+            // Watermark Icon
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = color.copy(alpha = 0.05f),
+                modifier = Modifier
+                    .size(64.dp)
+                    .align(Alignment.BottomStart)
+                    .offset(x = (-8).dp, y = 12.dp)
+            )
+
+            Column(
+                modifier = Modifier.fillMaxSize(),
+                verticalArrangement = Arrangement.SpaceBetween
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.Top
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(36.dp)
+                            .clip(CircleShape)
+                            .background(color.copy(alpha = 0.1f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = icon,
+                            contentDescription = null,
+                            tint = color,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                    
+                    Icon(
+                        imageVector = Icons.Default.ArrowForward,
+                        contentDescription = null,
+                        tint = Color.LightGray,
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
+
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    Text(
+                        text = title,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = Color.Black,
+                        lineHeight = 18.sp
+                    )
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = subtitle,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = Color.Gray,
+                        lineHeight = 14.sp
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun SchemeItem(title: String, desc: String) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(Color(0xFFF5F7F6), RoundedCornerShape(12.dp))
+            .padding(12.dp)
+    ) {
+        Text(text = title, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = AgriGreenPrimary)
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(text = desc, fontSize = 12.sp, color = Color.DarkGray, lineHeight = 18.sp)
+    }
+}
+
+@Composable
 fun FarmerMainTab(
     viewModel: MainViewModel,
     userName: String,
     onNavigateToDetail: (String) -> Unit,
     onNavigateToBooking: (String) -> Unit,
-    onNavigateToBookings: () -> Unit
+    onNavigateToBookings: () -> Unit,
+    onViewAllClick: () -> Unit,
+    onNavigateToProfile: () -> Unit,
+    onNavigateToRegisterMachinery: () -> Unit
 ) {
     val availableList by viewModel.availableMachinery.collectAsState()
     val bookings by viewModel.farmerBookings.collectAsState()
@@ -410,6 +592,9 @@ fun FarmerMainTab(
     val isAuthorized = user != null
 
     var selectedHomeFilter by remember { mutableStateOf<String?>(null) }
+    
+    var showRegisterInfoDialog by remember { mutableStateOf(false) }
+    var showSchemesDialog by remember { mutableStateOf(false) }
 
     val filteredList = remember(availableList, selectedHomeFilter) {
         when (selectedHomeFilter) {
@@ -423,16 +608,21 @@ fun FarmerMainTab(
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
-            .padding(horizontal = 16.dp, vertical = 8.dp),
+            .padding(vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         item(key = "welcome_header") {
-            WelcomeHeader(userName = userName)
+            Box(modifier = Modifier.padding(horizontal = 16.dp)) {
+                val loc by viewModel.userLocation.collectAsState()
+                WelcomeHeader(userName = userName, lat = loc.first, lng = loc.second)
+            }
         }
 
         item(key = "stats_header") {
             Row(
-                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 4.dp),
                 horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 AgriHomeStatCard(
@@ -472,25 +662,247 @@ fun FarmerMainTab(
                     fontSize = 20.sp,
                     fontWeight = FontWeight.Bold,
                     color = AgriGreenPrimary,
-                    modifier = Modifier.padding(top = 8.dp, bottom = 4.dp)
+                    modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 4.dp)
                 )
             }
 
-            items(filteredList, key = { it.id }) { machinery ->
-                MachineryListItem(
-                    machinery = machinery,
-                    isAuthorized = isAuthorized,
-                    viewModel = viewModel,
-                    onClick = { onNavigateToDetail(machinery.id) },
-                    onBookClick = { onNavigateToBooking(machinery.id) }
-                )
+            item(key = "nearby_machinery_list") {
+                val listState = rememberLazyListState()
+                val coroutineScope = rememberCoroutineScope()
+
+                val showLeftIndicator by remember {
+                    derivedStateOf {
+                        listState.firstVisibleItemIndex > 0 || listState.firstVisibleItemScrollOffset > 0
+                    }
+                }
+
+                val showRightIndicator by remember(filteredList) {
+                    derivedStateOf {
+                        val lastVisible = listState.layoutInfo.visibleItemsInfo.lastOrNull()
+                        lastVisible == null || lastVisible.index < filteredList.size - 1
+                    }
+                }
+
+                Box(modifier = Modifier.fillMaxWidth()) {
+                    LazyRow(
+                        state = listState,
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(0.dp),
+                        contentPadding = PaddingValues(bottom = 8.dp)
+                    ) {
+                        items(filteredList, key = { it.id }) { machinery ->
+                            Box(
+                                modifier = Modifier
+                                    .fillParentMaxWidth()
+                                    .padding(horizontal = 16.dp)
+                            ) {
+                                MachineryListItem(
+                                    machinery = machinery,
+                                    isAuthorized = isAuthorized,
+                                    viewModel = viewModel,
+                                    onClick = { onNavigateToDetail(machinery.id) },
+                                    onBookClick = { onNavigateToBooking(machinery.id) }
+                                )
+                            }
+                        }
+                    }
+
+                    // Green Left Indicator
+                    if (showLeftIndicator) {
+                        Box(
+                            modifier = Modifier
+                                .align(Alignment.TopStart)
+                                .padding(start = 24.dp, top = 192.dp)
+                                .shadow(elevation = 6.dp, shape = CircleShape)
+                                .size(40.dp)
+                                .background(AgriGreenPrimary.copy(alpha = 0.65f), CircleShape)
+                                .clickable {
+                                    coroutineScope.launch {
+                                        listState.animateScrollToItem(listState.firstVisibleItemIndex - 1)
+                                    }
+                                },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.ArrowBack,
+                                contentDescription = null,
+                                tint = Color.White.copy(alpha = 0.9f),
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
+                    }
+
+                    // Green Right Indicator
+                    if (showRightIndicator) {
+                        Box(
+                            modifier = Modifier
+                                .align(Alignment.TopEnd)
+                                .padding(end = 24.dp, top = 192.dp)
+                                .shadow(elevation = 6.dp, shape = CircleShape)
+                                .size(40.dp)
+                                .background(AgriGreenPrimary.copy(alpha = 0.65f), CircleShape)
+                                .clickable {
+                                    coroutineScope.launch {
+                                        listState.animateScrollToItem(listState.firstVisibleItemIndex + 1)
+                                    }
+                                },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.ArrowForward,
+                                contentDescription = null,
+                                tint = Color.White.copy(alpha = 0.9f),
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
+                    }
+                }
+            }
+
+            item(key = "view_more_button") {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .offset(y = (-12).dp)
+                        .padding(start = 16.dp, end = 16.dp, bottom = 12.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(54.dp)
+                            .clickable { onViewAllClick() }
+                            .shadow(elevation = 2.dp, shape = RoundedCornerShape(16.dp)),
+                        shape = RoundedCornerShape(16.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFFECF7F2)),
+                        border = BorderStroke(1.5.dp, AgriGreenPrimary.copy(alpha = 0.8f))
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxSize(),
+                            horizontalArrangement = Arrangement.Center,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = stringResource(id = R.string.btn_more_machines),
+                                color = AgriGreenPrimary,
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Icon(
+                                imageVector = Icons.Default.ArrowForward,
+                                contentDescription = null,
+                                tint = AgriGreenPrimary,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                    }
+                }
+            }
+
+            item(key = "extra_actions_tiles") {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = 16.dp, end = 16.dp, bottom = 16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    ActionTileCard(
+                        title = "زرعی مشین رجسٹر کریں؟",
+                        subtitle = "اپنی مشین کرائے پر دیں",
+                        icon = Icons.Default.Assignment,
+                        color = AgriGreenPrimary,
+                        onClick = onNavigateToRegisterMachinery,
+                        modifier = Modifier.weight(1f)
+                    )
+
+                    ActionTileCard(
+                        title = "محکمہ زراعت کی اسکیمیں",
+                        subtitle = "حکومتی سبسڈی اور پروگرام",
+                        icon = Icons.Default.Announcement,
+                        color = Color(0xFF1976D2),
+                        onClick = { showSchemesDialog = true },
+                        modifier = Modifier.weight(1f)
+                    )
+                }
             }
         } else {
             item {
-                PremiumEmptyState(
-                    message = "کوئی مشینری نہیں ملی",
-                    description = "آپ کے منتخب کردہ معیار کے مطابق کوئی مشینری دستیاب نہیں ہے۔",
-                    icon = Icons.Default.Agriculture
+                Box(modifier = Modifier.padding(horizontal = 16.dp)) {
+                    PremiumEmptyState(
+                        message = "کوئی مشینری نہیں ملی",
+                        description = "آپ کے منتخب کردہ معیار کے مطابق کوئی مشینری دستیاب نہیں ہے۔",
+                        icon = Icons.Default.Agriculture
+                    )
+                }
+            }
+        }
+    }
+
+    if (showRegisterInfoDialog) {
+        AgriConfirmationDialog(
+            title = "زرعی مشین رجسٹر کریں؟",
+            onDismissRequest = { showRegisterInfoDialog = false },
+            confirmButtonText = "کردار تبدیل کریں",
+            onConfirm = {
+                showRegisterInfoDialog = false
+                onNavigateToProfile()
+            },
+            dismissButtonText = "واپس"
+        ) {
+            Column(modifier = Modifier.fillMaxWidth()) {
+                Text(
+                    text = "اپنی زرعی مشینری (جیسے سپر سیڈر، ٹریکٹر) کسان مددگار ایپ پر کرائے کے لیے فراہم کر کے اپنی آمدنی بڑھائیں۔",
+                    fontSize = 15.sp,
+                    color = Color.DarkGray,
+                    lineHeight = 22.sp
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                Text(
+                    text = "مشینری رجسٹر کرنے کے لیے، آپ کو اپنا کردار تبدیل کر کے 'سروس فراہم کنندہ' (Service Provider) کے طور پر لاگ ان کرنا ہوگا۔",
+                    fontSize = 14.sp,
+                    color = AgriGreenPrimary,
+                    fontWeight = FontWeight.Bold,
+                    lineHeight = 20.sp
+                )
+            }
+        }
+    }
+
+    if (showSchemesDialog) {
+        AgriConfirmationDialog(
+            title = "محکمہ زراعت کی اسکیمیں",
+            onDismissRequest = { showSchemesDialog = false },
+            confirmButtonText = "ٹھیک ہے",
+            onConfirm = { showSchemesDialog = false },
+            dismissButtonText = "واپس"
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Text(
+                    text = "حکومتِ پنجاب کے محکمہ زراعت کی فعال اسکیمیں درج ذیل ہیں:",
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.Black
+                )
+
+                SchemeItem(
+                    title = "1. پنجاب کلین ائیر پروگرام (PCAP)",
+                    desc = "سپر سیڈر کے ذریعے گندم کی بوائی پر کاشتکاروں کو 5,000 روپے فی ایکڑ سبسڈی فراہم کی جا رہی ہے۔"
+                )
+
+                SchemeItem(
+                    title = "2. وزیراعلیٰ پنجاب گرین ٹریکٹر سکیم",
+                    desc = "کاشتکاروں کو جدید ٹریکٹرز کی خریداری پر 10 لاکھ روپے تک کی نقد سبسڈی دی جائے گی۔"
+                )
+
+                SchemeItem(
+                    title = "3. لیزر لینڈ لیولر پروگرام",
+                    desc = "پانی کی بچت اور پیداوار بڑھانے کے لیے لیزر لیولر کی خریداری پر 50 فیصد تک سبسڈی۔"
                 )
             }
         }
@@ -728,7 +1140,11 @@ fun MachineryListItem(
     }
 
     val displayImages = remember(machinery.imageUrls) {
-        if (machinery.imageUrls.isEmpty()) listOf("super_seeder") else machinery.imageUrls
+        if (machinery.imageUrls.isEmpty()) {
+            listOf("seeder_main_1", "seeder_main_2", "seeder_main_3", "seeder_main_4")
+        } else {
+            machinery.imageUrls
+        }
     }
 
     zoomedImageIndex?.let { index ->
@@ -761,7 +1177,7 @@ fun MachineryListItem(
                 ) {
                     itemsIndexed(displayImages) { index, imageName ->
                         val resId = context.resources.getIdentifier(imageName, "drawable", context.packageName)
-                        val finalResId = if (resId != 0) resId else R.drawable.super_seeder
+                        val finalResId = if (resId != 0) resId else R.drawable.super_seeder_custom
                         androidx.compose.foundation.Image(
                             painter = androidx.compose.ui.res.painterResource(id = finalResId),
                             contentDescription = null,
@@ -912,7 +1328,8 @@ fun MachineryListItem(
                                 text = displayPhone,
                                 color = Color.DarkGray,
                                 fontSize = 16.sp,
-                                fontWeight = FontWeight.Medium
+                                fontWeight = FontWeight.Medium,
+                                maxLines = 1
                             )
                         }
                     }
@@ -1168,27 +1585,42 @@ fun FarmerBookingsTab(viewModel: MainViewModel) {
 fun FarmerProfileTab(
     name: String,
     phone: String,
+    address: String,
     onNameChanged: (String) -> Unit,
-    onLogout: () -> Unit
+    onPhoneChanged: (String) -> Unit,
+    onAddressChanged: (String) -> Unit,
+    onLogout: () -> Unit,
+    onClose: () -> Unit,
+    onSwitchToProvider: () -> Unit
 ) {
     var editableName by remember(name) { mutableStateOf(name) }
+    var editablePhone by remember(phone) { mutableStateOf(phone) }
+    var editableAddress by remember(address) { mutableStateOf(address) }
     val maxCharLimit = 30
+    val maxPhoneLimit = 15
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(24.dp),
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 24.dp, vertical = 12.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Top
     ) {
-        Spacer(modifier = Modifier.height(40.dp))
-        Icon(
-            imageVector = Icons.Default.AccountCircle,
-            contentDescription = null,
-            tint = AgriGreenPrimary,
-            modifier = Modifier.size(100.dp)
-        )
-        Spacer(modifier = Modifier.height(16.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.End
+        ) {
+            IconButton(onClick = onClose) {
+                Icon(
+                    imageVector = Icons.Default.Close,
+                    contentDescription = "Close",
+                    tint = Color.Gray
+                )
+            }
+        }
+
+
         
         OutlinedTextField(
             value = editableName,
@@ -1201,7 +1633,7 @@ fun FarmerProfileTab(
             label = { Text("کسان کا نام") },
             placeholder = { Text("اپنا نام درج کریں") },
             singleLine = true,
-            modifier = Modifier.fillMaxWidth(0.9f),
+            modifier = Modifier.fillMaxWidth(0.95f),
             shape = RoundedCornerShape(16.dp),
             colors = OutlinedTextFieldDefaults.colors(
                 focusedTextColor = Color.Black,
@@ -1220,14 +1652,101 @@ fun FarmerProfileTab(
                 )
             }
         )
+
+        Spacer(modifier = Modifier.height(4.dp))
+
+        OutlinedTextField(
+            value = editablePhone,
+            onValueChange = { input ->
+                if (input.length <= maxPhoneLimit) {
+                    editablePhone = input
+                    onPhoneChanged(input)
+                }
+            },
+            label = { Text("موبائل نمبر") },
+            placeholder = { Text("اپنا موبائل نمبر درج کریں") },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth(0.95f),
+            shape = RoundedCornerShape(16.dp),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedTextColor = Color.Black,
+                unfocusedTextColor = Color.Black,
+                focusedBorderColor = AgriGreenPrimary,
+                unfocusedBorderColor = Color.Gray,
+                focusedLabelColor = AgriGreenPrimary
+            ),
+            supportingText = {
+                Text(
+                    text = "${editablePhone.length}/$maxPhoneLimit",
+                    modifier = Modifier.fillMaxWidth(),
+                    textAlign = TextAlign.End,
+                    color = Color.Gray,
+                    fontSize = 12.sp
+                )
+            }
+        )
+
+        Spacer(modifier = Modifier.height(4.dp))
+
+        OutlinedTextField(
+            value = editableAddress,
+            onValueChange = { input ->
+                editableAddress = input
+                onAddressChanged(input)
+            },
+            label = { Text("فارمنگ ایڈریس / پتہ (اختیاری)") },
+            placeholder = { Text("اپنا پتہ درج کریں") },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth(0.95f),
+            shape = RoundedCornerShape(16.dp),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedTextColor = Color.Black,
+                unfocusedTextColor = Color.Black,
+                focusedBorderColor = AgriGreenPrimary,
+                unfocusedBorderColor = Color.Gray,
+                focusedLabelColor = AgriGreenPrimary
+            )
+        )
         
-        Text(text = phone, fontSize = 14.sp, color = Color.Gray, modifier = Modifier.padding(top = 4.dp))
+        Spacer(modifier = Modifier.height(16.dp))
         
-        Spacer(modifier = Modifier.height(24.dp))
+        Button(
+            onClick = onSwitchToProvider,
+            modifier = Modifier
+                .fillMaxWidth(0.95f)
+                .heightIn(min = 50.dp),
+            shape = RoundedCornerShape(14.dp),
+            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = AgriGreenPrimary,
+                contentColor = Color.White
+            )
+        ) {
+            Text(
+                text = "سروس فراہم کنندہ موڈ میں تبدیل کریں",
+                fontSize = 15.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color.White,
+                textAlign = TextAlign.Center
+            )
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
         
+        UrduButton(
+            text = stringResource(id = R.string.btn_logout),
+            onClick = onLogout,
+            containerColor = Color.Red.copy(alpha = 0.85f),
+            modifier = Modifier.fillMaxWidth(0.95f).height(50.dp),
+            fontSize = 15.sp
+        )
+
+        Spacer(modifier = Modifier.height(20.dp))
+
         Card(
-            modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = Color.White)
+            modifier = Modifier.fillMaxWidth(0.95f),
+            colors = CardDefaults.cardColors(containerColor = Color.White),
+            border = BorderStroke(1.dp, Color(0xFFE0E0E0))
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
                 Row(
@@ -1249,14 +1768,6 @@ fun FarmerProfileTab(
                 }
             }
         }
-        
-        Spacer(modifier = Modifier.height(60.dp))
-        
-        UrduButton(
-            text = stringResource(id = R.string.btn_logout),
-            onClick = onLogout,
-            containerColor = Color.Red.copy(alpha = 0.85f)
-        )
     }
 }
 
@@ -1290,7 +1801,11 @@ fun MachineryDetailScreen(
     }
 
     val displayImages = remember(item?.imageUrls) {
-        if (item == null || item.imageUrls.isEmpty()) listOf("super_seeder") else item.imageUrls
+        if (item == null || item.imageUrls.isEmpty()) {
+            listOf("seeder_main_1", "seeder_main_2", "seeder_main_3", "seeder_main_4")
+        } else {
+            item.imageUrls
+        }
     }
 
     zoomedImageIndex?.let { index ->
@@ -1342,7 +1857,7 @@ fun MachineryDetailScreen(
                         ) {
                             itemsIndexed(displayImages) { index, imageName ->
                                 val resId = context.resources.getIdentifier(imageName, "drawable", context.packageName)
-                                val finalResId = if (resId != 0) resId else R.drawable.super_seeder
+                                val finalResId = if (resId != 0) resId else R.drawable.super_seeder_custom
                                 androidx.compose.foundation.Image(
                                     painter = androidx.compose.ui.res.painterResource(id = finalResId),
                                     contentDescription = null,
@@ -1528,6 +2043,9 @@ fun BookingConfirmationScreen(
     val user by viewModel.currentUser.collectAsState()
     var farmerName by remember(user) { mutableStateOf(user?.fullName ?: "") }
     val focusManager = androidx.compose.ui.platform.LocalFocusManager.current
+    val focusRequesterName = remember { FocusRequester() }
+    val focusRequesterAcres = remember { FocusRequester() }
+    var showErrors by remember { mutableStateOf(false) }
 
     LaunchedEffect(machineryId) {
         machinery = viewModel.availableMachinery.value.find { it.id == machineryId }
@@ -1572,13 +2090,9 @@ fun BookingConfirmationScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text(text = "بکنگ کی تصدیق", fontWeight = FontWeight.ExtraBold) },
-                navigationIcon = {
-                    IconButton(onClick = { if (currentStep > 1) currentStep = 1 else onBack() }) {
-                        Icon(imageVector = Icons.Default.ArrowBack, contentDescription = null)
-                    }
-                }
+            AgriDetailHeader(
+                title = "بکنگ کی تصدیق",
+                onBackClick = { if (currentStep > 1) { currentStep = 1; showErrors = false } else onBack() }
             )
         }
     ) { padding ->
@@ -1613,20 +2127,178 @@ fun BookingConfirmationScreen(
                     }
 
                     BookingCard(title = "مشین کی معلومات") {
-                        Column {
-                            Text(text = item.nameUr, fontWeight = FontWeight.Bold, fontSize = 18.sp, color = AgriGreenPrimary)
-                            Spacer(modifier = Modifier.height(4.dp))
-                            val rateText = "سبسڈی: 5000 Rs. فی ایکڑ"
-                            Text(text = rateText, fontSize = 14.sp, color = Color.Gray)
+                        val context = LocalContext.current
+                        val isAuthorized = user != null
+                        Column(modifier = Modifier.fillMaxWidth()) {
+                            // Badges Row (PCAP) - Center aligned with logo and Urdu text
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.Center
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .background(Color(0xFFECF7F2))
+                                        .border(BorderStroke(1.dp, Color(0xFF0B5D34).copy(alpha = 0.2f)), RoundedCornerShape(8.dp))
+                                        .padding(horizontal = 10.dp, vertical = 6.dp)
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.Center
+                                    ) {
+                                        androidx.compose.foundation.Image(
+                                            painter = painterResource(id = R.drawable.logo_pcap),
+                                            contentDescription = null,
+                                            modifier = Modifier.size(18.dp),
+                                            contentScale = ContentScale.Fit
+                                        )
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        Text(
+                                            text = "پنجاب کلین ائیر پروگرام (PCAP)",
+                                            color = Color(0xFF0B5D34),
+                                            fontSize = 12.sp,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    }
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.height(8.dp))
+
+                            // Restructured Row: Left/Start contains Title & Details Column, Right/End contains Subsidy Badge
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    // Owner Name and Details
+                                    Text(
+                                        text = item.providerName,
+                                        fontSize = 18.sp,
+                                        fontWeight = FontWeight.ExtraBold,
+                                        color = AgriGreenPrimary,
+                                        maxLines = 1,
+                                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                                    )
+
+                                    Spacer(modifier = Modifier.height(8.dp))
+
+                                    // Header (Tractor Icon + Machine Title)
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        androidx.compose.foundation.Image(
+                                            painter = painterResource(id = R.drawable.ic_super_seeder),
+                                            contentDescription = null,
+                                            modifier = Modifier.size(32.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text(
+                                            text = item.nameUr,
+                                            fontSize = 22.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = Color.Black,
+                                            maxLines = 1,
+                                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                                            modifier = Modifier.weight(1f)
+                                        )
+                                    }
+
+                                    Spacer(modifier = Modifier.height(8.dp))
+
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        androidx.compose.foundation.Image(
+                                            painter = painterResource(id = R.drawable.ic_location_round),
+                                            contentDescription = null,
+                                            modifier = Modifier.size(32.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text(text = stringResource(id = R.string.distance_km_format, "1.2"), color = Color.DarkGray, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                                    }
+
+                                    Spacer(modifier = Modifier.height(8.dp))
+
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        modifier = Modifier.clickable {
+                                            val clipboardManager = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+                                            val clipData = android.content.ClipData.newPlainText("phone", item.providerPhone)
+                                            clipboardManager.setPrimaryClip(clipData)
+                                            android.widget.Toast.makeText(context, "فون نمبر کاپی ہو گیا", android.widget.Toast.LENGTH_SHORT).show()
+                                        }
+                                    ) {
+                                        androidx.compose.foundation.Image(
+                                            painter = painterResource(id = R.drawable.ic_phone_round),
+                                            contentDescription = null,
+                                            modifier = Modifier.size(32.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        val displayPhone = if (isAuthorized) item.providerPhone else item.providerPhone.take(4) + "-*******"
+                                        Text(
+                                            text = displayPhone,
+                                            color = Color.DarkGray,
+                                            fontSize = 16.sp,
+                                            fontWeight = FontWeight.Medium,
+                                            maxLines = 1
+                                        )
+                                    }
+                                }
+
+                                Spacer(modifier = Modifier.width(12.dp))
+
+                                // Professional Subsidy Badge (Vertically centered relative to the details column)
+                                Box(
+                                    modifier = Modifier
+                                        .shadow(elevation = 1.dp, shape = RoundedCornerShape(12.dp))
+                                        .background(Color(0xFFECF7F2))
+                                        .border(BorderStroke(1.dp, Color(0xFF0B5D34).copy(alpha = 0.2f)), RoundedCornerShape(12.dp))
+                                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                        Icon(
+                                            imageVector = Icons.Default.Payments,
+                                            contentDescription = null,
+                                            tint = Color(0xFF0B5D34),
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                        Spacer(modifier = Modifier.height(2.dp))
+                                        Text(
+                                            text = "سبسڈی سکیم",
+                                            color = Color(0xFF0B5D34),
+                                            fontSize = 11.sp,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                        Text(
+                                            text = "5,000 Rs. فی ایکڑ",
+                                            color = Color(0xFF0B5D34),
+                                            fontSize = 13.sp,
+                                            fontWeight = FontWeight.Black
+                                        )
+                                    }
+                                }
+                            }
                         }
                     }
 
                     if (currentStep == 1) {
+                        val dateError = if (selectedDateMillis == null) {
+                            if (showErrors) "براہ کرم بکنگ کی تاریخ منتخب کریں" else null
+                        } else null
+
                         BookingCard(title = "بکنگ کا وقت منتخب کریں") {
                             DatePickerField(
                                 selectedDateMillis = selectedDateMillis,
-                                onDateSelected = { selectedDateMillis = it }
+                                onDateSelected = { selectedDateMillis = it },
+                                isError = dateError != null
                             )
+                            dateError?.let { err ->
+                                Spacer(modifier = Modifier.height(4.dp))
+                                ErrorMessage(message = err)
+                            }
                             Spacer(modifier = Modifier.height(16.dp))
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
@@ -1656,15 +2328,25 @@ fun BookingConfirmationScreen(
 
                         PrimaryButton(
                             text = stringResource(id = R.string.btn_next),
-                            onClick = { currentStep = 2 },
-                            enabled = selectedDateMillis != null
+                            onClick = {
+                                if (selectedDateMillis != null) {
+                                    currentStep = 2
+                                    showErrors = false
+                                } else {
+                                    showErrors = true
+                                }
+                            },
+                            enabled = true,
+                            containerColor = if (selectedDateMillis != null) AgriGreenPrimary else Color(0xFF89C2A5)
                         )
                         Spacer(modifier = Modifier.height(24.dp))
 
                     } else {
                         BookingCard(title = "ایکڑ اور رابطے کی تفصیلات") {
                             val acresDouble = acres.toDoubleOrNull()
-                            val acresError = if (acres.isNotEmpty() && (acresDouble == null || acresDouble < 0.1 || acresDouble > 100.0)) {
+                            val acresError = if (acres.isEmpty()) {
+                                if (showErrors) "براہ کرم ایکڑ درج کریں" else null
+                            } else if (acresDouble == null || acresDouble < 0.1 || acresDouble > 100.0) {
                                 "براہ کرم 0.1 سے 100 کے درمیان درست ایکڑ درج کریں"
                             } else null
 
@@ -1673,6 +2355,7 @@ fun BookingConfirmationScreen(
                                 onValueChange = { acres = it },
                                 label = "ایکڑ (لازمی)",
                                 helperText = "کم از کم 0.1 اور زیادہ سے زیادہ 100 ایکڑ۔",
+                                textFieldModifier = Modifier.focusRequester(focusRequesterAcres),
                                 isError = acresError != null,
                                 keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
                                     keyboardType = androidx.compose.ui.text.input.KeyboardType.Decimal,
@@ -1690,6 +2373,12 @@ fun BookingConfirmationScreen(
                             Spacer(modifier = Modifier.height(12.dp))
 
                             val maxCharLimit = 30
+                            val nameError = if (farmerName.trim().isEmpty()) {
+                                if (showErrors) "براہ کرم اپنا نام درج کریں" else null
+                            } else if (farmerName.trim() == "کسان دوست" || farmerName.trim().lowercase() == "kissan dost") {
+                                "براہ کرم اپنا اصل نام درج کریں (کسان دوست کے علاوہ)"
+                            } else null
+
                             OutlinedTextField(
                                 value = farmerName,
                                 onValueChange = { 
@@ -1699,7 +2388,8 @@ fun BookingConfirmationScreen(
                                 },
                                 label = { Text("نام") },
                                 placeholder = { Text("اپنا نام درج کریں", color = Color.Gray) },
-                                modifier = Modifier.fillMaxWidth(),
+                                modifier = Modifier.fillMaxWidth().focusRequester(focusRequesterName),
+                                isError = nameError != null,
                                 shape = RoundedCornerShape(16.dp),
                                 keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
                                     keyboardType = androidx.compose.ui.text.input.KeyboardType.Text,
@@ -1711,18 +2401,25 @@ fun BookingConfirmationScreen(
                                 colors = OutlinedTextFieldDefaults.colors(
                                     focusedTextColor = Color.Black,
                                     unfocusedTextColor = Color.Black,
-                                    focusedBorderColor = AgriGreenPrimary,
-                                    unfocusedBorderColor = Color.Gray,
-                                    focusedLabelColor = AgriGreenPrimary
+                                    focusedBorderColor = if (nameError != null) Color.Red else AgriGreenPrimary,
+                                    unfocusedBorderColor = if (nameError != null) Color.Red else Color.Gray,
+                                    focusedLabelColor = if (nameError != null) Color.Red else AgriGreenPrimary,
+                                    errorBorderColor = Color.Red,
+                                    errorLabelColor = Color.Red
                                 ),
                                 supportingText = {
-                                    Text(
-                                        text = "${farmerName.length}/$maxCharLimit",
-                                        modifier = Modifier.fillMaxWidth(),
-                                        textAlign = TextAlign.End,
-                                        color = Color.Gray,
-                                        fontSize = 12.sp
-                                    )
+                                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                        if (nameError != null) {
+                                            Text(text = nameError, color = Color.Red, fontSize = 12.sp, modifier = Modifier.weight(1f))
+                                        } else {
+                                            Spacer(modifier = Modifier.weight(1f))
+                                        }
+                                        Text(
+                                            text = "${farmerName.length}/$maxCharLimit",
+                                            color = Color.Gray,
+                                            fontSize = 12.sp
+                                        )
+                                    }
                                 }
                             )
 
@@ -1752,7 +2449,7 @@ fun BookingConfirmationScreen(
                         val total = acresValue * 5000.0
                         
                         val isAcresValid = acres.toDoubleOrNull() != null && acres.toDoubleOrNull()!! in 0.1..100.0
-                        val isNameValid = farmerName.trim().isNotEmpty()
+                        val isNameValid = farmerName.trim().isNotEmpty() && farmerName.trim() != "کسان دوست" && farmerName.trim().lowercase() != "kissan dost"
                         val isFormValid = selectedDateMillis != null && isAcresValid && isNameValid
 
                         SummaryCard(
@@ -1773,22 +2470,35 @@ fun BookingConfirmationScreen(
                             LoadingButton(
                                 text = "بکنگ کی درخواست بھیجیں",
                                 isLoading = isSubmitting,
-                                enabled = isFormValid,
+                                enabled = !isSubmitting,
+                                containerColor = if (isFormValid) AgriGreenPrimary else Color(0xFF89C2A5),
                                 onClick = {
-                                    isSubmitting = true
-                                    if (farmerName.trim().isNotEmpty()) {
-                                        viewModel.updateCurrentUserName(farmerName)
-                                    }
-                                    viewModel.createBooking(item.id, selectedDateMillis!!, hours, item.hourlyRate, acresValue) {
-                                        isSubmitting = false
-                                        showSuccess = true
+                                    if (isFormValid) {
+                                        isSubmitting = true
+                                        if (farmerName.trim().isNotEmpty()) {
+                                            viewModel.updateCurrentUserName(farmerName)
+                                        }
+                                        viewModel.createBooking(item.id, selectedDateMillis!!, hours, item.hourlyRate, acresValue) {
+                                            isSubmitting = false
+                                            showSuccess = true
+                                        }
+                                    } else {
+                                        showErrors = true
+                                        if (!isNameValid) {
+                                            focusRequesterName.requestFocus()
+                                        } else if (!isAcresValid) {
+                                            focusRequesterAcres.requestFocus()
+                                        }
                                     }
                                 },
                                 modifier = Modifier.fillMaxWidth()
                             )
                             SecondaryButton(
                                 text = "واپس",
-                                onClick = { currentStep = 1 },
+                                onClick = { 
+                                    currentStep = 1
+                                    showErrors = false
+                                },
                                 modifier = Modifier.fillMaxWidth()
                             )
                         }
@@ -1978,20 +2688,22 @@ fun FarmerAuthScreen(
                 .padding(horizontal = 24.dp, vertical = 40.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Box(modifier = Modifier.fillMaxWidth()) {
-                // Back / Close button
-                androidx.compose.material3.IconButton(
-                    onClick = onDismiss,
-                    modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .padding(bottom = 16.dp),
-                    enabled = !isLoading && !isSuccessStage
-                ) {
-                    Icon(
-                        imageVector = if (isDialog) Icons.Default.Close else Icons.Default.ArrowBack,
-                        contentDescription = if (isDialog) stringResource(id = R.string.auth_req_close) else stringResource(id = R.string.auth_req_back_btn),
-                        tint = Color.Black
-                    )
+            if (isDialog) {
+                Box(modifier = Modifier.fillMaxWidth()) {
+                    // Back / Close button
+                    androidx.compose.material3.IconButton(
+                        onClick = onDismiss,
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(bottom = 16.dp),
+                        enabled = !isLoading && !isSuccessStage
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = stringResource(id = R.string.auth_req_close),
+                            tint = Color.Black
+                        )
+                    }
                 }
             }
 
@@ -2215,7 +2927,13 @@ fun FarmerAuthScreen(
         }
     } else {
         Scaffold(
-            containerColor = Color.White
+            containerColor = Color.White,
+            topBar = {
+                AgriDetailHeader(
+                    title = if (isOtpStage) stringResource(id = R.string.auth_req_verify_title) else stringResource(id = R.string.auth_req_title),
+                    onBackClick = onDismiss
+                )
+            }
         ) { padding ->
             Box(
                 modifier = Modifier
@@ -2262,7 +2980,7 @@ fun FullScreenImageViewer(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color.Black),
+                .background(Color.White),
             contentAlignment = Alignment.Center
         ) {
             HorizontalPager(
@@ -2273,7 +2991,7 @@ fun FullScreenImageViewer(
                 val imageName = imageNames[page]
                 val context = LocalContext.current
                 val resId = context.resources.getIdentifier(imageName, "drawable", context.packageName)
-                val finalResId = if (resId != 0) resId else R.drawable.super_seeder
+                val finalResId = if (resId != 0) resId else R.drawable.super_seeder_custom
 
                 val scale = scales[page] ?: 1f
                 val offset = offsets[page] ?: Offset.Zero

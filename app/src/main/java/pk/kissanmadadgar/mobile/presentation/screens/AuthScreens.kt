@@ -45,14 +45,9 @@ fun SupplierLoginScreen(
     Scaffold(
         containerColor = Color.White,
         topBar = {
-            TopAppBar(
-                title = { Text(stringResource(id = R.string.supplier_login_title), fontWeight = FontWeight.Bold, color = Color.White) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(imageVector = Icons.Default.ArrowBack, contentDescription = null, tint = Color.White)
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = AgriGreenPrimary)
+            AgriDetailHeader(
+                title = stringResource(id = R.string.supplier_login_title),
+                onBackClick = onBack
             )
         }
     ) { padding ->
@@ -186,14 +181,9 @@ fun SupplierOtpVerificationScreen(
     Scaffold(
         containerColor = Color.White,
         topBar = {
-            TopAppBar(
-                title = { Text(stringResource(id = R.string.supplier_otp_title), fontWeight = FontWeight.Bold, color = Color.White) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(imageVector = Icons.Default.ArrowBack, contentDescription = null, tint = Color.White)
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = AgriGreenPrimary)
+            AgriDetailHeader(
+                title = stringResource(id = R.string.supplier_otp_title),
+                onBackClick = onBack
             )
         }
     ) { padding ->
@@ -322,14 +312,9 @@ fun OtpVerificationScreen(
     Scaffold(
         containerColor = Color.White,
         topBar = {
-            TopAppBar(
-                title = { Text(text = stringResource(id = R.string.otp_title), fontWeight = FontWeight.Bold, color = Color.White) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(imageVector = Icons.Default.ArrowBack, contentDescription = null, tint = Color.White)
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = AgriGreenPrimary)
+            AgriDetailHeader(
+                title = stringResource(id = R.string.otp_title),
+                onBackClick = onBack
             )
         }
     ) { padding ->
@@ -445,14 +430,9 @@ fun AdminLoginScreen(
     Scaffold(
         containerColor = Color.White,
         topBar = {
-            TopAppBar(
-                title = { Text(text = stringResource(id = R.string.admin_login_title), fontWeight = FontWeight.Bold, color = Color.White) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(imageVector = Icons.Default.ArrowBack, contentDescription = null, tint = Color.White)
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = AgriGreenPrimary)
+            AgriDetailHeader(
+                title = stringResource(id = R.string.admin_login_title),
+                onBackClick = onBack
             )
         }
     ) { padding ->

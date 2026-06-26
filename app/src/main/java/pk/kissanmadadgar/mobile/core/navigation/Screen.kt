@@ -23,6 +23,7 @@ sealed class Screen(val route: String) {
     object BookingConfirmation : Screen("booking_confirmation/{machineryId}") {
         fun createRoute(machineryId: String) = "booking_confirmation/$machineryId"
     }
+    object RegisterAgriculturalMachinery : Screen("register_agricultural_machinery")
 
     // Provider Portal
     object ProviderDashboard : Screen("provider_dashboard")

@@ -40,18 +40,18 @@ object KissanDiModule {
     @Provides
     @Singleton
     fun provideAuthRepository(): AuthRepository {
-        return MockAuthRepository()
+        return InMemoryAuthRepository()
     }
 
     @Provides
     @Singleton
     fun provideMachineryRepository(): MachineryRepository {
-        return MockMachineryRepository()
+        return InMemoryMachineryRepository()
     }
 
     @Provides
     @Singleton
     fun provideBookingRepository(): BookingRepository {
-        return MockBookingRepository()
+        return InMemoryBookingRepository()
     }
 }

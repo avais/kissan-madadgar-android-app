@@ -310,7 +310,26 @@ class MainActivity : ComponentActivity() {
                                                 popUpTo(0) { inclusive = true }
                                             }
                                         }
+                                    },
+                                    onNavigateToProviderDashboard = {
+                                        navController.navigate(Screen.ProviderDashboard.route) {
+                                            popUpTo(Screen.FarmerHome.route) { inclusive = true }
+                                        }
+                                    },
+                                    onNavigateToRegisterMachinery = {
+                                        navController.navigate(Screen.RegisterAgriculturalMachinery.route)
                                     }
+                                )
+                            }
+
+                            composable(Screen.RegisterAgriculturalMachinery.route) {
+                                RegisterAgriculturalMachineryScreen(
+                                    viewModel = viewModel,
+                                    onSuccess = {
+                                        Toast.makeText(this@MainActivity, "مشینری رجسٹریشن کی درخواست موصول ہو گئی ہے!", Toast.LENGTH_LONG).show()
+                                        navController.popBackStack()
+                                    },
+                                    onBack = { navController.popBackStack() }
                                 )
                             }
 
@@ -356,13 +375,18 @@ class MainActivity : ComponentActivity() {
                                 ProviderDashboardScreen(
                                     viewModel = viewModel,
                                     onNavigateToAddMachinery = {
-                                        navController.navigate(Screen.AddMachinery.route)
+                                        navController.navigate(Screen.RegisterAgriculturalMachinery.route)
                                     },
                                     onLogout = {
                                         viewModel.logout {
                                             navController.navigate(Screen.RoleSelection.route) {
                                                 popUpTo(0) { inclusive = true }
                                             }
+                                        }
+                                    },
+                                    onNavigateToFarmerHome = {
+                                        navController.navigate(Screen.FarmerHome.route) {
+                                            popUpTo(Screen.ProviderDashboard.route) { inclusive = true }
                                         }
                                     }
                                 )

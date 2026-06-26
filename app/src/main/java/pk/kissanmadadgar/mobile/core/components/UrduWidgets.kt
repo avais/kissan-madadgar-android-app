@@ -2,22 +2,30 @@ package pk.kissanmadadgar.mobile.core.components
 
 import androidx.compose.animation.*
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.AccountCircle
+import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.window.Dialog
 import kotlinx.coroutines.delay
 import pk.kissanmadadgar.mobile.core.theme.AgriGreenLight
@@ -96,7 +104,8 @@ fun UrduButton(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
     containerColor: Color = AgriGreenPrimary,
-    contentColor: Color = Color.White
+    contentColor: Color = Color.White,
+    fontSize: TextUnit = 18.sp
 ) {
     Button(
         onClick = onClick,
@@ -115,7 +124,7 @@ fun UrduButton(
     ) {
         Text(
             text = text,
-            fontSize = 18.sp,
+            fontSize = fontSize,
             fontWeight = FontWeight.Bold,
             textAlign = TextAlign.Center
         )
@@ -130,7 +139,15 @@ fun UrduTextField(
     modifier: Modifier = Modifier,
     placeholder: String = "",
     errorText: String? = null,
-    isPhoneNumber: Boolean = false
+    isPhoneNumber: Boolean = false,
+    keyboardOptions: androidx.compose.foundation.text.KeyboardOptions = if (isPhoneNumber) {
+        androidx.compose.foundation.text.KeyboardOptions(
+            keyboardType = androidx.compose.ui.text.input.KeyboardType.Number,
+            imeAction = androidx.compose.ui.text.input.ImeAction.Done
+        )
+    } else {
+        androidx.compose.foundation.text.KeyboardOptions.Default
+    }
 ) {
     // Force RTL direction for Urdu input alignment
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
@@ -143,6 +160,7 @@ fun UrduTextField(
                 placeholder = { Text(text = placeholder, fontSize = 14.sp, color = Color.Gray) },
                 shape = RoundedCornerShape(12.dp),
                 isError = errorText != null,
+                keyboardOptions = keyboardOptions,
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedTextColor = Color.Black,
                     unfocusedTextColor = Color.Black,
@@ -280,9 +298,16 @@ fun AgriConfirmationDialog(
                                 containerColor = confirmButtonColor,
                                 contentColor = Color.White
                             ),
+                            contentPadding = PaddingValues(horizontal = 4.dp),
                             elevation = ButtonDefaults.buttonElevation(defaultElevation = 2.dp)
                         ) {
-                            Text(text = confirmButtonText, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                            Text(
+                                text = confirmButtonText,
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
                         }
 
                         // Dismiss (Left side in RTL)
@@ -295,13 +320,205 @@ fun AgriConfirmationDialog(
                             border = BorderStroke(1.5.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.2f)),
                             colors = ButtonDefaults.outlinedButtonColors(
                                 contentColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f)
-                            )
+                            ),
+                            contentPadding = PaddingValues(horizontal = 4.dp)
                         ) {
-                            Text(text = dismissButtonText, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                            Text(
+                                text = dismissButtonText,
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
                         }
                     }
                 }
             }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun AgriAppHeader(
+    title: String,
+    onProfileClick: () -> Unit,
+    onBellClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val headerBrush = Brush.linearGradient(
+        colors = listOf(
+            Color(0xFF0A331A), // Deepest forest green
+            Color(0xFF15532D), // Rich dark green
+            Color(0xFF2E9B5C), // Emerald-lime shiny stripe
+            Color(0xFF15532D), // Rich dark green
+            Color(0xFF0A331A)  // Deepest forest green
+        )
+    )
+
+    Surface(
+        modifier = modifier
+            .shadow(
+                elevation = 8.dp,
+                shape = RoundedCornerShape(bottomStart = 18.dp, bottomEnd = 18.dp),
+                clip = true
+            ),
+        color = Color.Transparent
+    ) {
+        Box(
+            modifier = Modifier
+                .background(brush = headerBrush)
+                .fillMaxWidth()
+        ) {
+            CenterAlignedTopAppBar(
+                title = {
+                    Text(
+                        text = title,
+                        color = Color.White,
+                        fontWeight = FontWeight.Black,
+                        fontSize = 21.sp,
+                        letterSpacing = 0.5.sp
+                    )
+                },
+                actions = {
+                    IconButton(
+                        onClick = onProfileClick,
+                        modifier = Modifier.padding(end = 8.dp).size(48.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.AccountCircle,
+                            contentDescription = "Profile",
+                            tint = Color.White,
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    }
+                },
+                navigationIcon = {
+                    IconButton(
+                        onClick = onBellClick,
+                        modifier = Modifier.padding(start = 8.dp).size(48.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Notifications,
+                            contentDescription = "Notifications",
+                            tint = Color.White,
+                            modifier = Modifier.size(34.dp)
+                        )
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = Color.Transparent,
+                    titleContentColor = Color.White,
+                    navigationIconContentColor = Color.White,
+                    actionIconContentColor = Color.White
+                )
+            )
+        }
+    }
+}
+
+@Composable
+fun AgriNotificationsDialog(
+    onDismissRequest: () -> Unit
+) {
+    AgriConfirmationDialog(
+        title = "نوٹیفیکیشنز",
+        onDismissRequest = onDismissRequest,
+        confirmButtonText = "ٹھیک ہے",
+        onConfirm = onDismissRequest,
+        dismissButtonText = "بند کریں"
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 8.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Default.Notifications,
+                contentDescription = null,
+                tint = AgriGreenPrimary,
+                modifier = Modifier.size(48.dp)
+            )
+            Text(
+                text = "آپ کے پاس کوئی نیا نوٹیفیکیشن نہیں ہے۔",
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color.Black,
+                textAlign = TextAlign.Center
+            )
+            Text(
+                text = "تمام اہم معلومات اور الرٹس یہاں ظاہر ہوں گے۔",
+                fontSize = 13.sp,
+                color = Color.Gray,
+                textAlign = TextAlign.Center
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun AgriDetailHeader(
+    title: String,
+    onBackClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val headerBrush = Brush.linearGradient(
+        colors = listOf(
+            Color(0xFF0A331A), // Deepest forest green
+            Color(0xFF15532D), // Rich dark green
+            Color(0xFF2E9B5C), // Emerald-lime shiny stripe
+            Color(0xFF15532D), // Rich dark green
+            Color(0xFF0A331A)  // Deepest forest green
+        )
+    )
+
+    Surface(
+        modifier = modifier
+            .shadow(
+                elevation = 8.dp,
+                shape = RoundedCornerShape(bottomStart = 18.dp, bottomEnd = 18.dp),
+                clip = true
+            ),
+        color = Color.Transparent
+    ) {
+        Box(
+            modifier = Modifier
+                .background(brush = headerBrush)
+                .fillMaxWidth()
+        ) {
+            CenterAlignedTopAppBar(
+                title = {
+                    Text(
+                        text = title,
+                        color = Color.White,
+                        fontWeight = FontWeight.Black,
+                        fontSize = 21.sp,
+                        letterSpacing = 0.5.sp
+                    )
+                },
+                navigationIcon = {
+                    IconButton(
+                        onClick = onBackClick,
+                        modifier = Modifier.padding(start = 8.dp).size(48.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.ArrowBack,
+                            contentDescription = "Back",
+                            tint = Color.White,
+                            modifier = Modifier.size(28.dp)
+                        )
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = Color.Transparent,
+                    titleContentColor = Color.White,
+                    navigationIconContentColor = Color.White,
+                    actionIconContentColor = Color.White
+                )
+            )
         }
     }
 }

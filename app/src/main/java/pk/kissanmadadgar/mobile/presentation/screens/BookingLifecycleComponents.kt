@@ -81,6 +81,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -136,7 +137,7 @@ fun RequestDashboardStatsRow(
         horizontalArrangement = Arrangement.spacedBy(10.dp)
     ) {
         RequestStatCard(
-            title = "انتظار",
+            title = "جدید بکنگز",
             value = pendingCount.toString(),
             color = ActionOrange,
             icon = Icons.Default.HourglassEmpty,
@@ -441,16 +442,90 @@ fun ProviderRequestCard(
                 BookingStatusBadge(status = booking.status)
             }
 
-            // Title
-            Text(
-                text = booking.machineryName,
-                color = TextDark,
-                fontSize = 20.sp,
-                lineHeight = 26.sp,
-                fontWeight = FontWeight.ExtraBold
-            )
+            // PCAP Badge
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(Color(0xFFECF7F2))
+                        .border(BorderStroke(1.dp, Color(0xFF0B5D34).copy(alpha = 0.2f)), RoundedCornerShape(8.dp))
+                        .padding(horizontal = 10.dp, vertical = 6.dp)
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        Image(
+                            painter = painterResource(id = R.drawable.logo_pcap),
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp),
+                            contentScale = ContentScale.Fit
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = stringResource(id = R.string.badge_pcap),
+                            color = Color(0xFF0B5D34),
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+            }
 
-            // Compact 2-column info grid
+            // Title & Subsidy Badge Row
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = booking.machineryName,
+                    color = TextDark,
+                    fontSize = 20.sp,
+                    lineHeight = 26.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    modifier = Modifier.weight(1f)
+                )
+
+                Spacer(modifier = Modifier.width(12.dp))
+
+                // Subsidy Badge
+                Box(
+                    modifier = Modifier
+                        .shadow(elevation = 1.dp, shape = RoundedCornerShape(12.dp))
+                        .background(Color(0xFFECF7F2))
+                        .border(BorderStroke(1.dp, Color(0xFF0B5D34).copy(alpha = 0.2f)), RoundedCornerShape(12.dp))
+                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Icon(
+                            imageVector = Icons.Default.Payments,
+                            contentDescription = null,
+                            tint = Color(0xFF0B5D34),
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = "سبسڈی سکیم",
+                            color = Color(0xFF0B5D34),
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            text = "5,000 Rs. فی ایکڑ",
+                            color = Color(0xFF0B5D34),
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Black
+                        )
+                    }
+                }
+            }
+
+            // Compact 2-column info grid (No Raqqim)
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -459,7 +534,7 @@ fun ProviderRequestCard(
                     .padding(12.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                TileInfoRow(label = "کسان", value = booking.farmerName)
+                TileInfoRow(label = stringResource(id = R.string.label_farmer), value = booking.farmerName)
                 if (booking.farmerPhone.isNotBlank()) {
                     TileInfoRow(label = "فون", value = booking.farmerPhone)
                 }
@@ -487,12 +562,7 @@ fun ProviderRequestCard(
                     TileInfoChip(
                         label = "وقت",
                         value = "${booking.durationHours} گھنٹے",
-                        modifier = Modifier.weight(1f)
-                    )
-                    TileInfoChip(
-                        label = "رقم",
-                        value = "${formatNumber(booking.totalPrice)} Rs",
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier.fillMaxWidth()
                     )
                 }
                 TileInfoRow(label = "جگہ", value = booking.locationUr)
@@ -649,107 +719,147 @@ fun FarmerRequestCard(
             }
 
             // Details Column (Name, Machine Title, Location, Phone & Call Button)
-            Column(modifier = Modifier.fillMaxWidth()) {
-                // Owner Name and Details
-                Text(
-                    text = booking.providerName,
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.ExtraBold,
-                    color = AgriGreenPrimary,
-                    maxLines = 1,
-                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
-                )
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                // Header (Tractor Icon + Machine Title)
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Image(
-                        painter = painterResource(id = R.drawable.ic_super_seeder),
-                        contentDescription = null,
-                        modifier = Modifier.size(32.dp)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    // Owner Name and Details
                     Text(
-                        text = booking.machineryName,
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.Black,
-                        maxLines = 1,
-                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f)
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Image(
-                        painter = painterResource(id = R.drawable.ic_location_round),
-                        contentDescription = null,
-                        modifier = Modifier.size(32.dp)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = booking.locationUr,
-                        color = Color.DarkGray,
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.SemiBold,
+                        text = booking.providerName,
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = AgriGreenPrimary,
                         maxLines = 1,
                         overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                     )
-                }
 
-                Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
 
-                // Phone with custom icon and Call Button at the end of this Row
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
+                    // Header (Tractor Icon + Machine Title)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
                         Image(
-                            painter = painterResource(id = R.drawable.ic_phone_round),
+                            painter = painterResource(id = R.drawable.ic_super_seeder),
                             contentDescription = null,
                             modifier = Modifier.size(32.dp)
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = booking.providerPhone,
-                            color = Color.DarkGray,
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Medium
+                            text = booking.machineryName,
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.Black,
+                            maxLines = 1,
+                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f)
                         )
                     }
 
-                    // Phone Call Icon Button (consistent solid circle style, placed after phone details)
-                    val context = LocalContext.current
-                    Box(
-                        modifier = Modifier
-                            .size(38.dp)
-                            .clip(CircleShape)
-                            .background(AgriGreenPrimary)
-                            .clickable {
-                                try {
-                                    val intent = android.content.Intent(android.content.Intent.ACTION_DIAL).apply {
-                                        data = android.net.Uri.parse("tel:${booking.providerPhone}")
-                                    }
-                                    context.startActivity(intent)
-                                } catch (e: Exception) {
-                                    e.printStackTrace()
-                                }
-                            },
-                        contentAlignment = Alignment.Center
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Image(
+                            painter = painterResource(id = R.drawable.ic_location_round),
+                            contentDescription = null,
+                            modifier = Modifier.size(32.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = booking.locationUr,
+                            color = Color.DarkGray,
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            maxLines = 1,
+                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    // Phone with custom icon and Call Button at the end of this Row
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Image(
+                                painter = painterResource(id = R.drawable.ic_phone_round),
+                                contentDescription = null,
+                                modifier = Modifier.size(32.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = booking.providerPhone,
+                                color = Color.DarkGray,
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
+
+                        // Phone Call Icon Button (consistent solid circle style, placed after phone details)
+                        val context = LocalContext.current
+                        Box(
+                            modifier = Modifier
+                                .size(38.dp)
+                                .clip(CircleShape)
+                                .background(AgriGreenPrimary)
+                                .clickable {
+                                    try {
+                                        val intent = android.content.Intent(android.content.Intent.ACTION_DIAL).apply {
+                                            data = android.net.Uri.parse("tel:${booking.providerPhone}")
+                                        }
+                                        context.startActivity(intent)
+                                    } catch (e: Exception) {
+                                        e.printStackTrace()
+                                    }
+                                },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Phone,
+                                contentDescription = "Call",
+                                tint = Color.White,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.width(12.dp))
+
+                // Subsidy Badge
+                Box(
+                    modifier = Modifier
+                        .shadow(elevation = 1.dp, shape = RoundedCornerShape(12.dp))
+                        .background(Color(0xFFECF7F2))
+                        .border(BorderStroke(1.dp, Color(0xFF0B5D34).copy(alpha = 0.2f)), RoundedCornerShape(12.dp))
+                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Icon(
-                            imageVector = Icons.Default.Phone,
-                            contentDescription = "Call",
-                            tint = Color.White,
-                            modifier = Modifier.size(18.dp)
+                            imageVector = Icons.Default.Payments,
+                            contentDescription = null,
+                            tint = Color(0xFF0B5D34),
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = "سبسڈی سکیم",
+                            color = Color(0xFF0B5D34),
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            text = "5,000 Rs. فی ایکڑ",
+                            color = Color(0xFF0B5D34),
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Black
                         )
                     }
                 }
@@ -845,49 +955,90 @@ fun BookingLifecycleCard(
                 BookingStatusBadge(status = booking.status)
             }
 
-            // Title
-            Text(
-                text = booking.machineryName,
-                color = TextDark,
-                fontSize = 20.sp,
-                lineHeight = 26.sp,
-                fontWeight = FontWeight.ExtraBold
-            )
-
-            if (currentRole == UserRole.FARMER) {
-                // PCAP Badge
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
+            // PCAP Badge (Visible to both roles)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(Color(0xFFECF7F2))
+                        .border(BorderStroke(1.dp, Color(0xFF0B5D34).copy(alpha = 0.2f)), RoundedCornerShape(8.dp))
+                        .padding(horizontal = 10.dp, vertical = 6.dp)
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(Color(0xFFECF7F2))
-                            .border(BorderStroke(1.dp, Color(0xFF0B5D34).copy(alpha = 0.2f)), RoundedCornerShape(8.dp))
-                            .padding(horizontal = 10.dp, vertical = 6.dp)
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
                     ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.Center
-                        ) {
-                            Image(
-                                painter = painterResource(id = R.drawable.logo_pcap),
-                                contentDescription = null,
-                                modifier = Modifier.size(16.dp),
-                                contentScale = ContentScale.Fit
-                            )
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text(
-                                text = "پنجاب کلین ائیر پروگرام (PCAP)",
-                                color = Color(0xFF0B5D34),
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
+                        Image(
+                            painter = painterResource(id = R.drawable.logo_pcap),
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp),
+                            contentScale = ContentScale.Fit
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = "پنجاب کلین ائیر پروگرام (PCAP)",
+                            color = Color(0xFF0B5D34),
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold
+                        )
                     }
                 }
+            }
 
+            // Title & Subsidy Badge Row
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = booking.machineryName,
+                    color = TextDark,
+                    fontSize = 20.sp,
+                    lineHeight = 26.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    modifier = Modifier.weight(1f)
+                )
+
+                Spacer(modifier = Modifier.width(12.dp))
+
+                // Subsidy Badge
+                Box(
+                    modifier = Modifier
+                        .shadow(elevation = 1.dp, shape = RoundedCornerShape(12.dp))
+                        .background(Color(0xFFECF7F2))
+                        .border(BorderStroke(1.dp, Color(0xFF0B5D34).copy(alpha = 0.2f)), RoundedCornerShape(12.dp))
+                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Icon(
+                            imageVector = Icons.Default.Payments,
+                            contentDescription = null,
+                            tint = Color(0xFF0B5D34),
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = "سبسڈی سکیم",
+                            color = Color(0xFF0B5D34),
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            text = "5,000 Rs. فی ایکڑ",
+                            color = Color(0xFF0B5D34),
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Black
+                        )
+                    }
+                }
+            }
+
+            if (currentRole == UserRole.FARMER) {
                 // Service Provider Name
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -957,7 +1108,7 @@ fun BookingLifecycleCard(
             ) {
                 // Relevant Person Info
                 if (currentRole == UserRole.PROVIDER) {
-                    TileInfoRow(label = "کسان", value = booking.farmerName)
+                    TileInfoRow(label = stringResource(id = R.string.label_farmer), value = booking.farmerName)
                     if (booking.farmerPhone.isNotBlank()) {
                         TileInfoRow(label = "فون", value = booking.farmerPhone)
                     }
@@ -1355,7 +1506,7 @@ private fun ImportantDetailsCard(booking: Booking) {
                 lineHeight = 24.sp,
                 fontWeight = FontWeight.Bold
             )
-            SimpleInfoRow(label = "کسان", value = booking.farmerName)
+            SimpleInfoRow(label = stringResource(id = R.string.label_farmer), value = booking.farmerName)
             if (booking.farmerPhone.isNotBlank()) {
                 SimpleInfoRow(label = "فون", value = booking.farmerPhone)
             }
@@ -1907,7 +2058,7 @@ private fun stepHelpText(
 }
 
 private fun statusUi(status: BookingStatus): StatusUi = when (status) {
-    BookingStatus.PENDING -> StatusUi("انتظار", ActionOrange, Color(0xFFFFF3E0))
+    BookingStatus.PENDING -> StatusUi("جدید بکنگ", ActionOrange, Color(0xFFFFF3E0))
     BookingStatus.ACCEPTED -> StatusUi("منظور", AgriGreenPrimary, AgriGreenLight)
     BookingStatus.ACTIVE -> StatusUi("کام جاری", AgriGreenPrimary, AgriGreenLight)
     BookingStatus.COMPLETED -> StatusUi("مکمل", DoneGreen, AgriGreenLight)
@@ -2109,158 +2260,239 @@ fun BookingDetailOverlay(
                             BookingStatusBadge(status = booking.status)
                         }
 
-                        if (currentRole == UserRole.FARMER) {
-                            // PCAP Badge
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                verticalAlignment = Alignment.CenterVertically
+                        // PCAP Badge (Visible to both roles)
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(Color(0xFFECF7F2))
+                                    .border(BorderStroke(1.dp, Color(0xFF0B5D34).copy(alpha = 0.2f)), RoundedCornerShape(8.dp))
+                                    .padding(horizontal = 10.dp, vertical = 6.dp)
                             ) {
-                                Box(
-                                    modifier = Modifier
-                                        .clip(RoundedCornerShape(8.dp))
-                                        .background(Color(0xFFECF7F2))
-                                        .border(BorderStroke(1.dp, Color(0xFF0B5D34).copy(alpha = 0.2f)), RoundedCornerShape(8.dp))
-                                        .padding(horizontal = 10.dp, vertical = 6.dp)
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.Center
                                 ) {
-                                    Row(
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.Center
-                                    ) {
-                                        Image(
-                                            painter = painterResource(id = R.drawable.logo_pcap),
-                                            contentDescription = null,
-                                            modifier = Modifier.size(16.dp),
-                                            contentScale = ContentScale.Fit
-                                        )
-                                        Spacer(modifier = Modifier.width(6.dp))
-                                        Text(
-                                            text = stringResource(id = R.string.badge_pcap),
-                                            color = Color(0xFF0B5D34),
-                                            fontSize = 11.sp,
-                                            fontWeight = FontWeight.Bold
-                                        )
-                                    }
+                                    Image(
+                                        painter = painterResource(id = R.drawable.logo_pcap),
+                                        contentDescription = null,
+                                        modifier = Modifier.size(16.dp),
+                                        contentScale = ContentScale.Fit
+                                    )
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text(
+                                        text = stringResource(id = R.string.badge_pcap),
+                                        color = Color(0xFF0B5D34),
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
                                 }
                             }
+                        }
 
-                            Spacer(modifier = Modifier.height(4.dp))
+                        Spacer(modifier = Modifier.height(4.dp))
 
-                            // Provider details column
-                            Column(modifier = Modifier.fillMaxWidth()) {
-                                // Owner Name
-                                Text(
-                                    text = booking.providerName,
-                                    fontSize = 18.sp,
-                                    fontWeight = FontWeight.ExtraBold,
-                                    color = AgriGreenPrimary,
-                                    maxLines = 1,
-                                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
-                                )
-
-                                Spacer(modifier = Modifier.height(8.dp))
-
-                                // Machine Title
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Image(
-                                        painter = painterResource(id = R.drawable.ic_super_seeder),
-                                        contentDescription = null,
-                                        modifier = Modifier.size(32.dp)
-                                    )
-                                    Spacer(modifier = Modifier.width(8.dp))
+                        if (currentRole == UserRole.FARMER) {
+                            // Provider details Row with Subsidy Badge on the right
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    // Owner Name
                                     Text(
-                                        text = booking.machineryName,
-                                        fontSize = 20.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = Color.Black,
-                                        maxLines = 1,
-                                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
-                                        modifier = Modifier.weight(1f)
-                                    )
-                                }
-
-                                Spacer(modifier = Modifier.height(8.dp))
-
-                                // Location
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Image(
-                                        painter = painterResource(id = R.drawable.ic_location_round),
-                                        contentDescription = null,
-                                        modifier = Modifier.size(32.dp)
-                                    )
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Text(
-                                        text = booking.locationUr,
-                                        color = Color.DarkGray,
-                                        fontSize = 15.sp,
-                                        fontWeight = FontWeight.SemiBold,
+                                        text = booking.providerName,
+                                        fontSize = 18.sp,
+                                        fontWeight = FontWeight.ExtraBold,
+                                        color = AgriGreenPrimary,
                                         maxLines = 1,
                                         overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                                     )
-                                }
 
-                                Spacer(modifier = Modifier.height(8.dp))
+                                    Spacer(modifier = Modifier.height(8.dp))
 
-                                // Phone number and Call Icon row
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                    // Machine Title
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
                                         Image(
-                                            painter = painterResource(id = R.drawable.ic_phone_round),
+                                            painter = painterResource(id = R.drawable.ic_super_seeder),
                                             contentDescription = null,
                                             modifier = Modifier.size(32.dp)
                                         )
                                         Spacer(modifier = Modifier.width(8.dp))
                                         Text(
-                                            text = booking.providerPhone,
-                                            color = Color.DarkGray,
-                                            fontSize = 16.sp,
-                                            fontWeight = FontWeight.Medium
+                                            text = booking.machineryName,
+                                            fontSize = 20.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = Color.Black,
+                                            maxLines = 1,
+                                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                                            modifier = Modifier.weight(1f)
                                         )
                                     }
 
-                                    // Phone Call Icon Button (consistent solid circle style, placed after phone details)
-                                    val context = LocalContext.current
-                                    Box(
-                                        modifier = Modifier
-                                            .size(38.dp)
-                                            .clip(CircleShape)
-                                            .background(AgriGreenPrimary)
-                                            .clickable {
-                                                try {
-                                                    val intent = android.content.Intent(android.content.Intent.ACTION_DIAL).apply {
-                                                        data = android.net.Uri.parse("tel:${booking.providerPhone}")
-                                                    }
-                                                    context.startActivity(intent)
-                                                } catch (e: Exception) {
-                                                    e.printStackTrace()
-                                                }
-                                            },
-                                        contentAlignment = Alignment.Center
+                                    Spacer(modifier = Modifier.height(8.dp))
+
+                                    // Location
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Image(
+                                            painter = painterResource(id = R.drawable.ic_location_round),
+                                            contentDescription = null,
+                                            modifier = Modifier.size(32.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text(
+                                            text = booking.locationUr,
+                                            color = Color.DarkGray,
+                                            fontSize = 15.sp,
+                                            fontWeight = FontWeight.SemiBold,
+                                            maxLines = 1,
+                                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                                        )
+                                    }
+
+                                    Spacer(modifier = Modifier.height(8.dp))
+
+                                    // Phone number and Call Icon row
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
                                     ) {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Image(
+                                                painter = painterResource(id = R.drawable.ic_phone_round),
+                                                contentDescription = null,
+                                                modifier = Modifier.size(32.dp)
+                                            )
+                                            Spacer(modifier = Modifier.width(8.dp))
+                                            Text(
+                                                text = booking.providerPhone,
+                                                color = Color.DarkGray,
+                                                fontSize = 16.sp,
+                                                fontWeight = FontWeight.Medium
+                                            )
+                                        }
+
+                                        // Phone Call Icon Button (consistent solid circle style, placed after phone details)
+                                        val context = LocalContext.current
+                                        Box(
+                                            modifier = Modifier
+                                                .size(38.dp)
+                                                .clip(CircleShape)
+                                                .background(AgriGreenPrimary)
+                                                .clickable {
+                                                    try {
+                                                        val intent = android.content.Intent(android.content.Intent.ACTION_DIAL).apply {
+                                                            data = android.net.Uri.parse("tel:${booking.providerPhone}")
+                                                        }
+                                                        context.startActivity(intent)
+                                                    } catch (e: Exception) {
+                                                        e.printStackTrace()
+                                                    }
+                                                },
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.Phone,
+                                                contentDescription = "Call",
+                                                tint = Color.White,
+                                                modifier = Modifier.size(18.dp)
+                                            )
+                                        }
+                                    }
+                                }
+
+                                Spacer(modifier = Modifier.width(12.dp))
+
+                                // Subsidy Badge
+                                Box(
+                                    modifier = Modifier
+                                        .shadow(elevation = 1.dp, shape = RoundedCornerShape(12.dp))
+                                        .background(Color(0xFFECF7F2))
+                                        .border(BorderStroke(1.dp, Color(0xFF0B5D34).copy(alpha = 0.2f)), RoundedCornerShape(12.dp))
+                                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                         Icon(
-                                            imageVector = Icons.Default.Phone,
-                                            contentDescription = "Call",
-                                            tint = Color.White,
-                                            modifier = Modifier.size(18.dp)
+                                            imageVector = Icons.Default.Payments,
+                                            contentDescription = null,
+                                            tint = Color(0xFF0B5D34),
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                        Spacer(modifier = Modifier.height(2.dp))
+                                        Text(
+                                            text = "سبسڈی سکیم",
+                                            color = Color(0xFF0B5D34),
+                                            fontSize = 11.sp,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                        Text(
+                                            text = "5,000 Rs. فی ایکڑ",
+                                            color = Color(0xFF0B5D34),
+                                            fontSize = 13.sp,
+                                            fontWeight = FontWeight.Black
                                         )
                                     }
                                 }
                             }
                         } else {
-                            // If provider, they just see the machinery name text at the top
-                            Text(
-                                text = booking.machineryName,
-                                color = TextDark,
-                                fontSize = 20.sp,
-                                lineHeight = 26.sp,
-                                fontWeight = FontWeight.ExtraBold
-                            )
+                            // If provider, they see machinery name and the subsidy badge on the right
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = booking.machineryName,
+                                    color = TextDark,
+                                    fontSize = 20.sp,
+                                    lineHeight = 26.sp,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    modifier = Modifier.weight(1f)
+                                )
+
+                                Spacer(modifier = Modifier.width(12.dp))
+
+                                // Subsidy Badge
+                                Box(
+                                    modifier = Modifier
+                                        .shadow(elevation = 1.dp, shape = RoundedCornerShape(12.dp))
+                                        .background(Color(0xFFECF7F2))
+                                        .border(BorderStroke(1.dp, Color(0xFF0B5D34).copy(alpha = 0.2f)), RoundedCornerShape(12.dp))
+                                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                        Icon(
+                                            imageVector = Icons.Default.Payments,
+                                            contentDescription = null,
+                                            tint = Color(0xFF0B5D34),
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                        Spacer(modifier = Modifier.height(2.dp))
+                                        Text(
+                                            text = "سبسڈی سکیم",
+                                            color = Color(0xFF0B5D34),
+                                            fontSize = 11.sp,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                        Text(
+                                            text = "5,000 Rs. فی ایکڑ",
+                                            color = Color(0xFF0B5D34),
+                                            fontSize = 13.sp,
+                                            fontWeight = FontWeight.Black
+                                        )
+                                    }
+                                }
+                            }
                         }
 
                         // Compact 2-column info grid
