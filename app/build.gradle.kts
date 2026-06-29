@@ -73,6 +73,15 @@ dependencies {
     ksp("com.google.dagger:hilt-compiler:2.50")
     implementation("androidx.hilt:hilt-navigation-compose:1.1.0")
 
+    // Retrofit & OkHttp Network Libraries
+    implementation("com.squareup.retrofit2:retrofit:2.9.0")
+    implementation("com.squareup.retrofit2:converter-gson:2.9.0")
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
+
+    // Coil Image Loading
+    implementation("io.coil-kt:coil-compose:2.5.0")
+
     // Room Database
     val roomVersion = "2.6.1"
     implementation("androidx.room:room-runtime:$roomVersion")
