@@ -11,6 +11,12 @@ import pk.kissanmadadgar.mobile.R
 import pk.kissanmadadgar.mobile.core.security.SessionManager
 import pk.kissanmadadgar.mobile.domain.model.*
 import pk.kissanmadadgar.mobile.domain.repository.*
+import pk.kissanmadadgar.mobile.data.remote.dto.ImplementDto
+import pk.kissanmadadgar.mobile.data.remote.dto.DistrictDto
+import pk.kissanmadadgar.mobile.data.remote.dto.RegisterMachineryRequest
+import pk.kissanmadadgar.mobile.data.remote.dto.MachineRegistrationItem
+import pk.kissanmadadgar.mobile.data.remote.dto.UserInfoDto
+import pk.kissanmadadgar.mobile.data.remote.dto.MobileProfileResponse
 import javax.inject.Inject
 
 @HiltViewModel
@@ -31,6 +37,32 @@ class MainViewModel @Inject constructor(
 
     private val _isContactAuthorized = MutableStateFlow(false)
     val isContactAuthorized = _isContactAuthorized.asStateFlow()
+
+    private val _userAddress = MutableStateFlow(sessionManager.getUserAddress() ?: "")
+    val userAddress = _userAddress.asStateFlow()
+
+    private val _userCnic = MutableStateFlow(sessionManager.getUserCnic() ?: "")
+    val userCnic = _userCnic.asStateFlow()
+
+    // Implements API loading states
+    private val _implementsList = MutableStateFlow<List<ImplementDto>>(emptyList())
+    val implementsList = _implementsList.asStateFlow()
+
+    private val _isLoadingImplements = MutableStateFlow(false)
+    val isLoadingImplements = _isLoadingImplements.asStateFlow()
+
+    // Districts API loading states
+    private val _districtsList = MutableStateFlow<List<DistrictDto>>(emptyList())
+    val districtsList = _districtsList.asStateFlow()
+
+    private val _isLoadingDistricts = MutableStateFlow(false)
+    val isLoadingDistricts = _isLoadingDistricts.asStateFlow()
+
+    private val _userDistrict = MutableStateFlow(sessionManager.getUserDistrict() ?: "")
+    val userDistrict = _userDistrict.asStateFlow()
+
+    private val _profileResponse = MutableStateFlow<MobileProfileResponse?>(null)
+    val profileResponse = _profileResponse.asStateFlow()
 
     // Machinery States
     val categories = machineryRepo.getCategories().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
@@ -80,7 +112,7 @@ class MainViewModel @Inject constructor(
                 _selectedRole.value = role
                 // Fetch mock details
                 val name = sessionManager.getUserName() ?: context.getString(R.string.default_user_name)
-                val phone = sessionManager.getAuthToken() ?: "03000000000"
+                val phone = sessionManager.getUserPhone() ?: sessionManager.getAuthToken() ?: "03000000000"
                 val user = User(userId, phone, name, role, null, true)
                 _currentUser.value = user
                 
@@ -90,6 +122,8 @@ class MainViewModel @Inject constructor(
                 }
                 
                 loadRoleSpecificData(userId, role)
+            } else {
+                fetchGuestToken()
             }
         }
     }
@@ -129,7 +163,60 @@ class MainViewModel @Inject constructor(
     }
 
     // Auth Flows
-    fun verifyOtp(phone: String, otp: String, onSuccess: () -> Unit, onError: (String) -> Unit) {
+    private val _otpSentMessage = MutableStateFlow<String?>(null)
+    val otpSentMessage = _otpSentMessage.asStateFlow()
+
+    fun fetchImplements() {
+        viewModelScope.launch {
+            _isLoadingImplements.value = true
+            authRepo.getImplements()
+                .onSuccess { list ->
+                    _implementsList.value = list.filter { it.status == "ACTIVE" }
+                }
+                .onFailure {
+                    // Fallback to empty list or let UI handle fallback
+                }
+            _isLoadingImplements.value = false
+        }
+    }
+
+    fun fetchDistricts() {
+        viewModelScope.launch {
+            _isLoadingDistricts.value = true
+            authRepo.getDistricts()
+                .onSuccess { list ->
+                    _districtsList.value = list.filter { it.active }
+                }
+                .onFailure {
+                    // Fallback or let UI handle fallback
+                }
+            _isLoadingDistricts.value = false
+        }
+    }
+
+    fun sendOtp(phone: String, cnic: String?, onSuccess: () -> Unit, onError: (String) -> Unit) {
+        viewModelScope.launch {
+            val formattedPhone = if (phone.startsWith("+92")) {
+                "0" + phone.substring(3)
+            } else if (phone.startsWith("92")) {
+                "0" + phone.substring(2)
+            } else {
+                phone
+            }
+            val location = _userLocation.value
+            authRepo.login(formattedPhone, cnic, location.first, location.second)
+                .onSuccess { message ->
+                    _otpSentMessage.value = message
+                    onSuccess()
+                }
+                .onFailure {
+                    _otpSentMessage.value = null
+                    onError(it.localizedMessage ?: "او ٹی پی بھیجنے میں خرابی پیش آئی۔")
+                }
+        }
+    }
+
+    fun verifyOtp(phone: String, otp: String, onSuccess: () -> Unit, onError: (String) -> Unit, guestToken: String? = null, type: String? = null) {
         viewModelScope.launch {
             val role = _selectedRole.value ?: UserRole.FARMER
             val verifiedProvider = _currentUser.value?.takeIf { role == UserRole.PROVIDER && it.role == UserRole.PROVIDER }
@@ -140,7 +227,7 @@ class MainViewModel @Inject constructor(
                     sessionManager.saveUserRole(UserRole.PROVIDER)
                     sessionManager.saveUserId(updatedProvider.id)
                     sessionManager.saveUserName(updatedProvider.fullName)
-                    sessionManager.saveAuthToken(updatedProvider.phoneNumber)
+                    sessionManager.saveUserPhone(updatedProvider.phoneNumber)
                     if (authRepo is pk.kissanmadadgar.mobile.data.mock.InMemoryAuthRepository) {
                         authRepo.setCurrentUser(updatedProvider)
                     }
@@ -151,12 +238,29 @@ class MainViewModel @Inject constructor(
                 }
                 return@launch
             }
-            authRepo.verifyOtp(phone, otp, role)
+            val formattedPhone = if (phone.startsWith("+92")) {
+                "0" + phone.substring(3)
+            } else if (phone.startsWith("92")) {
+                "0" + phone.substring(2)
+            } else {
+                phone
+            }
+            authRepo.verifyOtp(formattedPhone, otp, role, guestToken, type)
                 .onSuccess { user ->
                     _currentUser.value = user
                     sessionManager.saveUserId(user.id)
                     sessionManager.saveUserName(user.fullName)
-                    sessionManager.saveAuthToken(user.phoneNumber)
+                    
+                    val currentToken = sessionManager.getAuthToken()
+                    if (currentToken.isNullOrEmpty() || currentToken == phone || currentToken == user.phoneNumber) {
+                        sessionManager.saveAuthToken(user.phoneNumber)
+                    }
+                    sessionManager.saveUserPhone(user.phoneNumber)
+                    
+                    _userAddress.value = sessionManager.getUserAddress() ?: ""
+                    _userCnic.value = sessionManager.getUserCnic() ?: ""
+                    _userDistrict.value = sessionManager.getUserDistrict() ?: ""
+                    
                     loadRoleSpecificData(user.id, role)
                     onSuccess()
                 }
@@ -173,7 +277,8 @@ class MainViewModel @Inject constructor(
                     _currentUser.value = user
                     sessionManager.saveUserId(user.id)
                     sessionManager.saveUserName(user.fullName)
-                    sessionManager.saveAuthToken(user.phoneNumber)
+                    sessionManager.saveUserPhone(user.phoneNumber)
+                    _userAddress.value = address
                     loadRoleSpecificData(user.id, UserRole.FARMER)
                     onSuccess()
                 }
@@ -192,7 +297,8 @@ class MainViewModel @Inject constructor(
                     sessionManager.saveUserRole(UserRole.PROVIDER)
                     sessionManager.saveUserId(user.id)
                     sessionManager.saveUserName(user.fullName)
-                    sessionManager.saveAuthToken(user.phoneNumber)
+                    sessionManager.saveUserPhone(user.phoneNumber)
+                    _userCnic.value = cnic
                     loadRoleSpecificData(user.id, UserRole.PROVIDER)
                     onSuccess(user)
                 }
@@ -236,9 +342,19 @@ class MainViewModel @Inject constructor(
         viewModelScope.launch {
             val current = _currentUser.value
             if (current != null) {
-                val updated = current.copy(phoneNumber = newPhone)
+                val formattedPhone = if (newPhone.startsWith("+92")) {
+                    "0" + newPhone.substring(3)
+                } else if (newPhone.startsWith("92")) {
+                    "0" + newPhone.substring(2)
+                } else {
+                    newPhone
+                }
+                val updated = current.copy(phoneNumber = formattedPhone)
                 _currentUser.value = updated
-                sessionManager.saveAuthToken(newPhone)
+                val currentToken = sessionManager.getAuthToken()
+                if (currentToken.isNullOrEmpty() || currentToken == current.phoneNumber || !currentToken.contains(".")) {
+                    sessionManager.saveAuthToken(formattedPhone)
+                }
                 if (authRepo is pk.kissanmadadgar.mobile.data.mock.InMemoryAuthRepository) {
                     authRepo.setCurrentUser(updated)
                 }
@@ -248,11 +364,32 @@ class MainViewModel @Inject constructor(
 
     fun updateCurrentUserAddress(newAddress: String) {
         sessionManager.saveUserAddress(newAddress)
+        _userAddress.value = newAddress
     }
 
     fun getCurrentUserAddress(): String {
-        return sessionManager.getUserAddress() ?: ""
+        return _userAddress.value
     }
+
+    fun updateCurrentUserCnic(newCnic: String) {
+        sessionManager.saveUserCnic(newCnic)
+        _userCnic.value = newCnic
+    }
+
+    fun getCurrentUserCnic(): String {
+        return _userCnic.value
+    }
+
+    fun updateCurrentUserDistrict(newDistrict: String) {
+        sessionManager.saveUserDistrict(newDistrict)
+        _userDistrict.value = newDistrict
+    }
+
+    fun getCurrentUserDistrict(): String {
+        return _userDistrict.value
+    }
+
+
 
     fun switchToProviderMode(onComplete: () -> Unit) {
         viewModelScope.launch {
@@ -292,7 +429,59 @@ class MainViewModel @Inject constructor(
             sessionManager.clearSession()
             _currentUser.value = null
             _selectedRole.value = null
+            _userAddress.value = ""
+            _userCnic.value = ""
+            _userDistrict.value = ""
+            fetchGuestToken()
             onComplete()
+        }
+    }
+
+    fun getGuestToken(): String? {
+        return sessionManager.getGuestToken()
+    }
+
+    fun fetchUserProfile() {
+        viewModelScope.launch {
+            val token = sessionManager.getAuthToken()
+            if (!token.isNullOrEmpty()) {
+                val authHeader = if (token.startsWith("Bearer ")) token else "Bearer $token"
+                authRepo.getProfile(authHeader)
+                    .onSuccess { response ->
+                        _profileResponse.value = response
+                        response.name?.let { updateCurrentUserName(it) }
+                        response.cnic?.let { _userCnic.value = it; sessionManager.saveUserCnic(it) }
+                        response.address?.let { _userAddress.value = it; sessionManager.saveUserAddress(it) }
+                        response.district?.let { _userDistrict.value = it; sessionManager.saveUserDistrict(it) }
+                        response.mobile?.let { updateCurrentUserPhone(it) }
+                    }
+                    .onFailure {
+                        // Handle failure or fallback
+                    }
+            }
+        }
+    }
+
+    fun fetchGuestToken(onComplete: () -> Unit = {}) {
+        viewModelScope.launch {
+            val request = pk.kissanmadadgar.mobile.data.remote.dto.GuestTokenRequest(
+                deviceId = pk.kissanmadadgar.mobile.core.AppConfig.DEVICE_ID,
+                appVersion = pk.kissanmadadgar.mobile.core.AppConfig.APP_VERSION,
+                signature = pk.kissanmadadgar.mobile.core.AppConfig.SIGNATURE
+            )
+            authRepo.getGuestToken(request)
+                .onSuccess { response ->
+                    response.guestToken?.let { token ->
+                        sessionManager.saveGuestToken(token)
+                        sessionManager.saveUserRole(UserRole.PROVIDER)
+                        _selectedRole.value = UserRole.PROVIDER
+                    }
+                    onComplete()
+                }
+                .onFailure {
+                    android.util.Log.e("MainViewModel", "Failed to fetch guest token", it)
+                    onComplete()
+                }
         }
     }
 
@@ -352,79 +541,136 @@ class MainViewModel @Inject constructor(
     }
 
     fun registerFarmerMachinery(
-        machineTypes: List<String>,
-        quantity: Int,
+        machineQuantities: Map<String, Int>,
         district: String,
         phoneNumber: String,
-        onSuccess: () -> Unit
+        cnic: String,
+        fullName: String,
+        onSuccess: (pk.kissanmadadgar.mobile.data.remote.dto.RegisterMachineryResponse) -> Unit,
+        onError: (String) -> Unit
     ) {
         viewModelScope.launch {
+            // Save logged in user details before setting current user to providerUser
+            val loggedInUser = _currentUser.value
+            val loggedInUserId = loggedInUser?.id?.toLongOrNull()
+
             // 1. Log user in as a Service Provider with this phone number
             val providerUser = User(
                 id = "usr_" + System.currentTimeMillis().toString().takeLast(6),
                 phoneNumber = phoneNumber,
-                fullName = "کاشتکار مالک (${district})",
+                fullName = fullName.trim().ifEmpty { "کاشتکار مالک (${district})" },
                 role = UserRole.PROVIDER,
                 profileImageUrl = null,
                 isActive = true
             )
-            _currentUser.value = providerUser
-            _selectedRole.value = UserRole.PROVIDER
-            sessionManager.saveUserRole(UserRole.PROVIDER)
-            sessionManager.saveUserId(providerUser.id)
-            sessionManager.saveUserName(providerUser.fullName)
-            sessionManager.saveAuthToken(phoneNumber)
-            sessionManager.saveUserAddress(district)
-            
-            if (authRepo is pk.kissanmadadgar.mobile.data.mock.InMemoryAuthRepository) {
-                authRepo.setCurrentUser(providerUser)
-            }
-            
-            // 2. Register quantity of each selected machinery item
-            machineTypes.forEachIndexed { typeIndex, machineType ->
-                val categoryId = when (machineType) {
-                    "سپرسیڈر", "Super Seeder" -> "cat_4"
-                    "بیلر", "Baler" -> "cat_3"
-                    "ہارویسٹر", "Harvester" -> "cat_2"
-                    else -> "cat_1"
-                }
 
-                for (i in 1..quantity) {
-                    val suffix = if (quantity > 1) " $i" else ""
-                    val machinery = Machinery(
-                        id = "mach_" + System.currentTimeMillis().toString().takeLast(6) + "_${typeIndex}_$i",
-                        providerId = providerUser.id,
-                        providerName = providerUser.fullName,
-                        providerPhone = phoneNumber,
-                        categoryId = categoryId,
-                        nameUr = "$machineType$suffix",
-                        descriptionUr = "رابطہ نمبر: $phoneNumber۔ کسان رجسٹریشن کے تحت رجسٹرڈ شدہ مشینری۔",
-                        modelYear = 2026,
-                        hourlyRate = when (machineType) {
-                            "سپرسیڈر", "Super Seeder" -> 2200.0
-                            "بیلر", "Baler" -> 1800.0
-                            "ہارویسٹر", "Harvester" -> 3500.0
-                            else -> 1500.0
-                        },
-                        latitude = _userLocation.value.first + (i * 0.001) + (typeIndex * 0.001),
-                        longitude = _userLocation.value.second + (i * 0.001) + (typeIndex * 0.001),
-                        isAvailable = true,
-                        status = MachineryStatus.APPROVED, // Approved directly for farmer convenience demo
-                        imageUrls = when (machineType) {
-                            "سپرسیڈر", "Super Seeder" -> listOf("seeder_main_1", "seeder_main_2", "seeder_main_3", "seeder_main_4")
-                            else -> emptyList()
-                        },
-                        rating = 5.0,
-                        acresDone = 0.0,
-                        distanceCoveredKm = 0.0,
-                        districtUr = district
-                    )
-                    machineryRepo.addMachinery(machinery)
+            // 2. Prepare JSON payload and send backend call
+            val machinesList = mutableListOf<MachineRegistrationItem>()
+            val selectedDistrictDto = districtsList.value.find { it.nameUrdu == district }
+            val districtId = selectedDistrictDto?.id ?: 1
+
+            machineQuantities.forEach { (machineType, quantity) ->
+                val matchedImplement = implementsList.value.find { it.nameUr == machineType || it.name == machineType }
+                val implementId = matchedImplement?.id ?: when (machineType) {
+                    "سپرسیڈر", "Super Seeder" -> 8
+                    "بیلر", "Baler" -> 9
+                    "ہارویسٹر", "Harvester" -> 10
+                    else -> 10
                 }
+                machinesList.add(
+                    MachineRegistrationItem(
+                        implementId = implementId,
+                        number = quantity,
+                        districtId = districtId
+                    )
+                )
             }
-            
-            loadRoleSpecificData(providerUser.id, UserRole.PROVIDER)
-            onSuccess()
+
+            val payload = RegisterMachineryRequest(
+                machines = machinesList,
+                userInfo = UserInfoDto(
+                    id = loggedInUserId,
+                    fullName = providerUser.fullName,
+                    cnic = cnic,
+                    mobileNumber = phoneNumber,
+                    latitude = _userLocation.value.first,
+                    longitude = _userLocation.value.second
+                )
+            )
+
+            // Perform API call
+            authRepo.registerMachinery(payload)
+                .onSuccess { response ->
+                    android.util.Log.d("MainViewModel", "Machinery registered successfully on server")
+                    
+                    // Register quantity of each selected machinery item locally for immediate UI display
+                    var typeIndex = 0
+                    machineQuantities.forEach { (machineType, quantity) ->
+                        val categoryId = when (machineType) {
+                            "سپرسیڈر", "Super Seeder" -> "cat_4"
+                            "بیلر", "Baler" -> "cat_3"
+                            "ہارویسٹر", "Harvester" -> "cat_2"
+                            else -> "cat_1"
+                        }
+
+                        for (i in 1..quantity) {
+                            val suffix = if (quantity > 1) " $i" else ""
+                            val machinery = Machinery(
+                                id = "mach_" + System.currentTimeMillis().toString().takeLast(6) + "_${typeIndex}_$i",
+                                providerId = providerUser.id,
+                                providerName = providerUser.fullName,
+                                providerPhone = phoneNumber,
+                                categoryId = categoryId,
+                                nameUr = "$machineType$suffix",
+                                descriptionUr = "رابطہ نمبر: $phoneNumber۔ کسان رجسٹریشن کے تحت رجسٹرڈ شدہ مشینری۔",
+                                modelYear = 2026,
+                                hourlyRate = when (machineType) {
+                                    "سپرسیڈر", "Super Seeder" -> 2200.0
+                                    "بیلر", "Baler" -> 1800.0
+                                    "ہارویسٹر", "Harvester" -> 3500.0
+                                    else -> 1500.0
+                                },
+                                latitude = _userLocation.value.first + (i * 0.001) + (typeIndex * 0.001),
+                                longitude = _userLocation.value.second + (i * 0.001) + (typeIndex * 0.001),
+                                isAvailable = true,
+                                status = MachineryStatus.APPROVED, // Approved directly for farmer convenience demo
+                                imageUrls = when (machineType) {
+                                    "سپرسیڈر", "Super Seeder" -> listOf("seeder_main_1", "seeder_main_2", "seeder_main_3", "seeder_main_4")
+                                    else -> emptyList()
+                                },
+                                rating = 5.0,
+                                acresDone = 0.0,
+                                distanceCoveredKm = 0.0,
+                                districtUr = district
+                            )
+                            machineryRepo.addMachinery(machinery)
+                        }
+                        typeIndex++
+                    }
+
+                    if (response.isOtpSent == true) {
+                        response.guestToken?.let { sessionManager.saveGuestToken(it) }
+                    } else {
+                        _currentUser.value = providerUser
+                        _selectedRole.value = UserRole.PROVIDER
+                        sessionManager.saveUserRole(UserRole.PROVIDER)
+                        sessionManager.saveUserId(providerUser.id)
+                        sessionManager.saveUserName(providerUser.fullName)
+                        sessionManager.saveUserPhone(phoneNumber)
+                        sessionManager.saveUserAddress(district)
+                        sessionManager.saveUserCnic(cnic)
+                        
+                        if (authRepo is pk.kissanmadadgar.mobile.data.mock.InMemoryAuthRepository) {
+                            authRepo.setCurrentUser(providerUser)
+                        }
+                    }
+
+                    onSuccess(response)
+                }
+                .onFailure {
+                    android.util.Log.e("MainViewModel", "Failed to register machinery on server", it)
+                    onError(it.localizedMessage ?: "زرعی مشینری کی رجسٹریشن ناکام ہو گئی۔")
+                }
         }
     }
 

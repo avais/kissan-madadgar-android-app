@@ -5,6 +5,13 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.map
 import pk.kissanmadadgar.mobile.domain.model.*
 import pk.kissanmadadgar.mobile.domain.repository.*
+import pk.kissanmadadgar.mobile.data.remote.dto.ImplementDto
+import pk.kissanmadadgar.mobile.data.remote.dto.DistrictDto
+import pk.kissanmadadgar.mobile.data.remote.dto.RegisterMachineryRequest
+import pk.kissanmadadgar.mobile.data.remote.dto.RegisterMachineryResponse
+import pk.kissanmadadgar.mobile.data.remote.dto.GuestTokenRequest
+import pk.kissanmadadgar.mobile.data.remote.dto.GuestTokenResponse
+import pk.kissanmadadgar.mobile.data.remote.dto.MobileProfileResponse
 import java.util.UUID
 
 class InMemoryAuthRepository : AuthRepository {
@@ -17,12 +24,12 @@ class InMemoryAuthRepository : AuthRepository {
         User("usr_admin", "admin@kissan.pk", "سید زین العابدین", UserRole.ADMIN, null, true)
     )
 
-    override suspend fun login(phoneNumber: String): Result<Boolean> {
-        // Any mobile number is allowed. If existing, returns true.
-        return Result.success(true)
+    override suspend fun login(phone: String, cnic: String?, latitude: Double, longitude: Double): Result<String> {
+        // Any mobile number is allowed. Return mock success message.
+        return Result.success("او ٹی پی کامیابی کے ساتھ بھیج دیا گیا ہے۔ یہ 15 منٹ میں ایکسپائر ہو جائے گا۔")
     }
 
-    override suspend fun verifyOtp(phoneNumber: String, otp: String, role: UserRole): Result<User> {
+    override suspend fun verifyOtp(phoneNumber: String, otp: String, role: UserRole, guestToken: String?, type: String?): Result<User> {
         if (otp == "0000" || otp.length == 4) {
             val existing = mockUsers.find { it.phoneNumber == phoneNumber && it.role == role }
             val user = if (existing != null) {
@@ -135,6 +142,59 @@ class InMemoryAuthRepository : AuthRepository {
     
     fun setCurrentUser(user: User?) {
         currentUserState.value = user
+    }
+
+    override suspend fun getImplements(): Result<List<ImplementDto>> {
+        return Result.success(listOf(
+            ImplementDto(8, "Super Seeder", "سپرسیڈر", null, null, null, null, "ACTIVE"),
+            ImplementDto(9, "Baler", "بیلر", null, null, null, null, "ACTIVE"),
+            ImplementDto(10, "Harvester", "ہارویسٹر", null, null, null, null, "ACTIVE")
+        ))
+    }
+
+    override suspend fun getDistricts(): Result<List<DistrictDto>> {
+        return Result.success(listOf(
+            DistrictDto(1, "Faisalabad", "فیصل آباد", "DIST_1_FAISALABAD", true, 1, "Faisalabad", 5),
+            DistrictDto(2, "Jhang", "جھنگ", "DIST_2_JHANG", true, 1, "Faisalabad", 4),
+            DistrictDto(3, "Chiniot", "چنیوٹ", "DIST_3_CHINIOT", true, 1, "Faisalabad", 3)
+        ))
+    }
+
+    override suspend fun registerMachinery(payload: RegisterMachineryRequest): Result<RegisterMachineryResponse> {
+        val isGuest = getCurrentUser() == null
+        return Result.success(RegisterMachineryResponse(
+            success = true,
+            message = "مشینری کامیابی کے ساتھ رجسٹر ہو گئی ہے۔",
+            isOtpSent = isGuest,
+            guestToken = if (isGuest) "mock_guest_token_" + System.currentTimeMillis() else null
+        ))
+    }
+
+    override suspend fun getGuestToken(request: GuestTokenRequest): Result<GuestTokenResponse> {
+        return Result.success(GuestTokenResponse(
+            guestToken = "mock_guest_token_" + System.currentTimeMillis(),
+            message = "مہمان ٹوکن کامیابی سے حاصل کر لیا گیا ہے۔"
+        ))
+    }
+
+    override suspend fun getProfile(token: String): Result<MobileProfileResponse> {
+        val user = getCurrentUser()
+        val name = user?.fullName ?: "معزز کاشتکار"
+        val mobile = user?.phoneNumber ?: "03000555888"
+        return Result.success(
+            MobileProfileResponse(
+                name = name,
+                editName = true,
+                district = "چنیوٹ",
+                editDistrict = true,
+                mobile = mobile,
+                editMobile = false, // Let's make mobile non-editable as requested by user ("if editMobile is true then can edit other wise disabled")
+                cnic = "37405-1234567-1",
+                editCnic = true,
+                address = "سرگودھا روڈ، چنیوٹ",
+                editAddress = true
+            )
+        )
     }
 }
 

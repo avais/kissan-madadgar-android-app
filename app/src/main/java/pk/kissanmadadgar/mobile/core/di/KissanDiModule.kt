@@ -10,6 +10,8 @@ import dagger.hilt.components.SingletonComponent
 import pk.kissanmadadgar.mobile.core.security.SessionManager
 import pk.kissanmadadgar.mobile.data.local.KissanDatabase
 import pk.kissanmadadgar.mobile.data.mock.*
+import pk.kissanmadadgar.mobile.data.remote.api.AuthApiService
+import pk.kissanmadadgar.mobile.data.repository.AuthRepositoryImpl
 import pk.kissanmadadgar.mobile.domain.repository.*
 import javax.inject.Singleton
 
@@ -39,8 +41,11 @@ object KissanDiModule {
 
     @Provides
     @Singleton
-    fun provideAuthRepository(): AuthRepository {
-        return InMemoryAuthRepository()
+    fun provideAuthRepository(
+        authApiService: AuthApiService,
+        sessionManager: SessionManager
+    ): AuthRepository {
+        return AuthRepositoryImpl(authApiService, sessionManager)
     }
 
     @Provides

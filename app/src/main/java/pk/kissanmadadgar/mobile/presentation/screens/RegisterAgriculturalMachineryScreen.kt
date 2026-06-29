@@ -2,6 +2,8 @@ package pk.kissanmadadgar.mobile.presentation.screens
 
 import android.widget.Toast
 import androidx.compose.animation.*
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -35,12 +37,16 @@ import androidx.compose.ui.unit.sp
 import pk.kissanmadadgar.mobile.R
 import pk.kissanmadadgar.mobile.core.components.UrduButton
 import pk.kissanmadadgar.mobile.core.components.UrduTextField
-import pk.kissanmadadgar.mobile.core.components.PhoneNumberInput
 import pk.kissanmadadgar.mobile.core.theme.AgriGreenLight
 import pk.kissanmadadgar.mobile.core.theme.AgriGreenPrimary
 import pk.kissanmadadgar.mobile.presentation.MainViewModel
+import pk.kissanmadadgar.mobile.data.remote.dto.ImplementDto
+import pk.kissanmadadgar.mobile.data.remote.dto.DistrictDto
+import androidx.compose.ui.text.TextStyle
+import pk.kissanmadadgar.mobile.core.components.CNICInputField
+import pk.kissanmadadgar.mobile.core.components.PhoneNumberInput
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 fun RegisterAgriculturalMachineryScreen(
     viewModel: MainViewModel,
@@ -50,43 +56,83 @@ fun RegisterAgriculturalMachineryScreen(
     val context = LocalContext.current
 
     // State holding selected machines (Set of strings)
-    var selectedMachines by remember { mutableStateOf(emptySet<String>()) }
+    var machineQuantities by remember { mutableStateOf(emptyMap<String, Int>()) }
     var customMachineName by remember { mutableStateOf("") }
-    var quantity by remember { mutableStateOf<Int?>(null) }
+    
+    data class MachineDialogData(val name: String, val drawableResId: Int, val imageUrls: List<String>, val currentQty: Int)
+    var machineToSetQuantity by remember { mutableStateOf<MachineDialogData?>(null) }
+    
+    val implements by viewModel.implementsList.collectAsState()
+    val isLoadingImplements by viewModel.isLoadingImplements.collectAsState()
+    
+    val districtsList by viewModel.districtsList.collectAsState()
+    val districtNames = remember(districtsList) {
+        districtsList.map { it.nameUrdu }
+    }
+
+    LaunchedEffect(Unit) {
+        viewModel.fetchImplements()
+        viewModel.fetchDistricts()
+    }
+    
+    val first3Implements = remember(implements) {
+        implements.take(3)
+    }
+    
+    val otherImplements = remember(implements) {
+        if (implements.size > 3) implements.drop(3) else emptyList()
+    }
+    
+    val otherMachineryOptions = remember(otherImplements) {
+        otherImplements.map { it.nameUr }
+    }
+    
+    fun sanitizeImageUrl(url: String?): String? {
+        if (url == null) return null
+        if (url.contains(":9089") && !url.contains(":9089/")) {
+            return url.replace(":9089", ":9089/")
+        }
+        return url
+    }
     var selectedDistrict by remember { mutableStateOf<String?>(null) }
     val user by viewModel.currentUser.collectAsState()
-    var phoneNumber by remember(user) { mutableStateOf(user?.phoneNumber ?: "") }
+    var phoneNumber by remember(user) { 
+        mutableStateOf(
+            user?.phoneNumber?.let {
+                if (it.startsWith("+92")) "0" + it.substring(3) else it
+            } ?: ""
+        ) 
+    }
+    var cnic by remember { mutableStateOf(viewModel.getCurrentUserCnic()) }
+    var fullName by remember(user) { mutableStateOf(user?.fullName ?: "") }
     var otpCode by remember { mutableStateOf("") }
+    var isSubmitting by remember { mutableStateOf(false) }
+    var showSuccessDialog by remember { mutableStateOf(false) }
 
-    // Step state: 0 (Machine), 1 (Quantity), 2 (District), 3 (Phone), 4 (OTP)
+    // Step state: 0 (Machine), 1 (District), 2 (Phone), 3 (OTP)
     var currentStep by remember { mutableStateOf(0) }
 
     // Error states
     var phoneError by remember { mutableStateOf<String?>(null) }
+    var cnicError by remember { mutableStateOf<String?>(null) }
+    var nameError by remember { mutableStateOf<String?>(null) }
     var otpError by remember { mutableStateOf<String?>(null) }
 
-    // Districts list
-    val districts = listOf(
-        "سرگودھا", "چنیوٹ", "فیصل آباد", "لاہور", "ملتان", 
-        "بھکر", "جھنگ", "گوجرانوالہ", "ساہیوال"
-    )
 
-    // Other machinery options (dummy data for UI/UX approval)
-    val otherMachineryOptions = listOf(
-        "کلٹیویٹر",
-        "روٹا ویٹر",
-        "لیزر لینڈ لیولر",
-        "ڈسک ہیرو",
-        "تھریشر",
-        "چاف کٹر",
-        "بیج ڈرل",
-        "مٹی پلٹنے والا ہل"
-    )
+
+
 
     var customDropdownExpanded by remember { mutableStateOf(false) }
 
     // Progress percentage based on active step
-    val progressFraction = (currentStep.toFloat() + 1f) / 5f
+    val progressFraction = remember(currentStep) {
+        when (currentStep) {
+            0 -> 0.33f
+            1 -> 0.66f
+            2 -> 1.00f
+            else -> 0.00f
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -167,14 +213,17 @@ fun RegisterAgriculturalMachineryScreen(
                     
                     // --- STEP 0: Select Machine (Multi Selection with Images) ---
                     if (currentStep >= 0) {
-                        val formattedSummary = remember(selectedMachines, customMachineName) {
-                            val list = selectedMachines.toMutableList()
-                            if (list.contains("دیگر مشینیں")) {
-                                list.remove("دیگر مشینیں")
-                                if (customMachineName.isNotEmpty()) {
-                                    list.add(customMachineName)
+                        val formattedSummary = remember(machineQuantities, customMachineName) {
+                            val list = mutableListOf<String>()
+                            machineQuantities.forEach { (machine, qty) ->
+                                if (machine == "دیگر مشینیں") {
+                                    if (customMachineName.isNotEmpty()) {
+                                        list.add("$customMachineName ($qty)")
+                                    } else {
+                                        list.add("دیگر ($qty)")
+                                    }
                                 } else {
-                                    list.add("دیگر")
+                                    list.add("$machine ($qty)")
                                 }
                             }
                             list.joinToString("، ")
@@ -185,85 +234,132 @@ fun RegisterAgriculturalMachineryScreen(
                             currentStep = currentStep,
                             title = stringResource(id = R.string.step_select_machine_title),
                             summaryText = stringResource(id = R.string.summary_machine, formattedSummary),
-                            isCompleted = selectedMachines.isNotEmpty() && (!selectedMachines.contains("دیگر مشینیں") || customMachineName.isNotEmpty()) && currentStep > 0,
+                            isCompleted = machineQuantities.isNotEmpty() && (!machineQuantities.containsKey("دیگر مشینیں") || customMachineName.isNotEmpty()) && currentStep > 0,
                             onEditClick = { currentStep = 0 }
                         ) {
-                            Column(modifier = Modifier.fillMaxWidth()) {
-                                Text(
-                                    text = stringResource(id = R.string.step_select_machine_prompt),
-                                    fontSize = 16.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = AgriGreenPrimary,
-                                    modifier = Modifier.padding(bottom = 12.dp)
-                                )
+                            if (isLoadingImplements) {
+                                Box(
+                                    modifier = Modifier.fillMaxWidth().height(200.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    CircularProgressIndicator(color = AgriGreenPrimary)
+                                }
+                            } else {
+                                Column(modifier = Modifier.fillMaxWidth()) {
+                                    Text(
+                                        text = stringResource(id = R.string.step_select_machine_prompt),
+                                        fontSize = 16.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = AgriGreenPrimary,
+                                        modifier = Modifier.padding(bottom = 12.dp)
+                                    )
 
-                                // 2x2 Grid for standard machines (using images)
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                                ) {
-                                    MachineOptionCard(
-                                        name = stringResource(id = R.string.machine_super_seeder),
-                                        drawableResId = R.drawable.super_seeder_custom,
-                                        isSelected = selectedMachines.contains("سپرسیڈر"),
-                                        onClick = {
-                                            selectedMachines = if (selectedMachines.contains("سپرسیڈر")) {
-                                                selectedMachines - "سپرسیڈر"
-                                            } else {
-                                                selectedMachines + "سپرسیڈر"
-                                            }
-                                        },
-                                        modifier = Modifier.weight(1f)
-                                    )
-                                    MachineOptionCard(
-                                        name = stringResource(id = R.string.machine_baler),
-                                        drawableResId = R.drawable.bailer,
-                                        isSelected = selectedMachines.contains("بیلر"),
-                                        onClick = {
-                                            selectedMachines = if (selectedMachines.contains("بیلر")) {
-                                                selectedMachines - "بیلر"
-                                            } else {
-                                                selectedMachines + "بیلر"
-                                            }
-                                        },
-                                        modifier = Modifier.weight(1f)
-                                    )
-                                }
-                                Spacer(modifier = Modifier.height(12.dp))
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                                ) {
-                                    MachineOptionCard(
-                                        name = stringResource(id = R.string.machine_harvester),
-                                        drawableResId = R.drawable.harvester,
-                                        isSelected = selectedMachines.contains("ہارویسٹر"),
-                                        onClick = {
-                                            selectedMachines = if (selectedMachines.contains("ہارویسٹر")) {
-                                                selectedMachines - "ہارویسٹر"
-                                            } else {
-                                                selectedMachines + "ہارویسٹر"
-                                            }
-                                        },
-                                        modifier = Modifier.weight(1f)
-                                    )
-                                    MachineOptionCard(
-                                        name = stringResource(id = R.string.machine_others),
-                                        drawableResId = R.drawable.other_machinery_clean,
-                                        isSelected = selectedMachines.contains("دیگر مشینیں"),
-                                        onClick = {
-                                            selectedMachines = if (selectedMachines.contains("دیگر مشینیں")) {
-                                                selectedMachines - "دیگر مشینیں"
-                                            } else {
-                                                selectedMachines + "دیگر مشینیں"
-                                            }
-                                        },
-                                        modifier = Modifier.weight(1f)
-                                    )
-                                }
+                                    // 2x2 Grid for standard machines (using images)
+                                    val othersStr = stringResource(id = R.string.machine_others)
+
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                    ) {
+                                        val item1 = first3Implements.getOrNull(0)
+                                        val name1 = item1?.nameUr ?: stringResource(id = R.string.machine_super_seeder)
+                                        val fallback1 = R.drawable.super_seeder_custom
+                                        val imgUrl1 = sanitizeImageUrl(item1?.picture1)
+                                        val urls1 = listOf(
+                                            sanitizeImageUrl(item1?.picture1),
+                                            sanitizeImageUrl(item1?.picture2),
+                                            sanitizeImageUrl(item1?.picture3),
+                                            sanitizeImageUrl(item1?.picture4)
+                                        ).filterNotNull()
+                                        MachineOptionCard(
+                                            name = name1,
+                                            drawableResId = fallback1,
+                                            imageUrl = imgUrl1,
+                                            quantity = machineQuantities[name1],
+                                            onClick = {
+                                                machineToSetQuantity = MachineDialogData(name1, fallback1, urls1, machineQuantities[name1] ?: 0)
+                                            },
+                                            modifier = Modifier.weight(1f)
+                                        )
+
+                                        val item2 = first3Implements.getOrNull(1)
+                                        val name2 = item2?.nameUr ?: stringResource(id = R.string.machine_baler)
+                                        val fallback2 = R.drawable.bailer
+                                        val imgUrl2 = sanitizeImageUrl(item2?.picture1)
+                                        val urls2 = listOf(
+                                            sanitizeImageUrl(item2?.picture1),
+                                            sanitizeImageUrl(item2?.picture2),
+                                            sanitizeImageUrl(item2?.picture3),
+                                            sanitizeImageUrl(item2?.picture4)
+                                        ).filterNotNull()
+                                        MachineOptionCard(
+                                            name = name2,
+                                            drawableResId = fallback2,
+                                            imageUrl = imgUrl2,
+                                            quantity = machineQuantities[name2],
+                                            onClick = {
+                                                machineToSetQuantity = MachineDialogData(name2, fallback2, urls2, machineQuantities[name2] ?: 0)
+                                            },
+                                            modifier = Modifier.weight(1f)
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.height(12.dp))
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                    ) {
+                                        val item3 = first3Implements.getOrNull(2)
+                                        val name3 = item3?.nameUr ?: stringResource(id = R.string.machine_harvester)
+                                        val fallback3 = R.drawable.harvester
+                                        val imgUrl3 = sanitizeImageUrl(item3?.picture1)
+                                        val urls3 = listOf(
+                                            sanitizeImageUrl(item3?.picture1),
+                                            sanitizeImageUrl(item3?.picture2),
+                                            sanitizeImageUrl(item3?.picture3),
+                                            sanitizeImageUrl(item3?.picture4)
+                                        ).filterNotNull()
+                                        MachineOptionCard(
+                                            name = name3,
+                                            drawableResId = fallback3,
+                                            imageUrl = imgUrl3,
+                                            quantity = machineQuantities[name3],
+                                            onClick = {
+                                                machineToSetQuantity = MachineDialogData(name3, fallback3, urls3, machineQuantities[name3] ?: 0)
+                                            },
+                                            modifier = Modifier.weight(1f)
+                                        )
+
+                                        val fallbackOthers = R.drawable.other_machinery_clean
+                                        MachineOptionCard(
+                                            name = othersStr,
+                                            drawableResId = fallbackOthers,
+                                            imageUrl = null,
+                                            quantity = machineQuantities["دیگر مشینیں"],
+                                            onClick = {
+                                                if (machineQuantities.containsKey("دیگر مشینیں")) {
+                                                     if (customMachineName.isNotEmpty()) {
+                                                         val matchedImplement = otherImplements.find { it.nameUr == customMachineName }
+                                                         val urls = listOf(
+                                                             sanitizeImageUrl(matchedImplement?.picture1),
+                                                             sanitizeImageUrl(matchedImplement?.picture2),
+                                                             sanitizeImageUrl(matchedImplement?.picture3),
+                                                             sanitizeImageUrl(matchedImplement?.picture4)
+                                                         ).filterNotNull()
+                                                         machineToSetQuantity = MachineDialogData("دیگر مشینیں", fallbackOthers, urls, machineQuantities["دیگر مشینیں"] ?: 0)
+                                                     } else {
+                                                        machineQuantities = machineQuantities - "دیگر مشینیں"
+                                                    }
+                                                } else {
+                                                    machineQuantities = machineQuantities + ("دیگر مشینیں" to 0)
+                                                    customDropdownExpanded = true
+                                                }
+                                            },
+                                            modifier = Modifier.weight(1f)
+                                        )
+                                    }
 
                                 // Expand dropdown if "Others" selected
-                                if (selectedMachines.contains("دیگر مشینیں")) {
+                                if (machineQuantities.containsKey("دیگر مشینیں")) {
                                     Spacer(modifier = Modifier.height(16.dp))
                                     Text(
                                         text = "دیگر زرعی مشین منتخب کریں",
@@ -303,6 +399,14 @@ fun RegisterAgriculturalMachineryScreen(
                                                     onClick = {
                                                         customMachineName = machine
                                                         customDropdownExpanded = false
+                                                        val matchedImplement = otherImplements.find { it.nameUr == machine }
+                                                        val urls = listOf(
+                                                            sanitizeImageUrl(matchedImplement?.picture1),
+                                                            sanitizeImageUrl(matchedImplement?.picture2),
+                                                            sanitizeImageUrl(matchedImplement?.picture3),
+                                                            sanitizeImageUrl(matchedImplement?.picture4)
+                                                        ).filterNotNull()
+                                                        machineToSetQuantity = MachineDialogData("دیگر مشینیں", R.drawable.other_machinery_clean, urls, machineQuantities["دیگر مشینیں"] ?: 0)
                                                     }
                                                 )
                                             }
@@ -315,225 +419,299 @@ fun RegisterAgriculturalMachineryScreen(
                                 UrduButton(
                                     text = stringResource(id = R.string.btn_continue),
                                     onClick = {
-                                        if (selectedMachines.contains("دیگر مشینیں") && customMachineName.trim().isEmpty()) {
+                                        if (machineQuantities.containsKey("دیگر مشینیں") && customMachineName.trim().isEmpty()) {
                                             Toast.makeText(context, "براہ کرم دیگر مشین منتخب کریں", Toast.LENGTH_SHORT).show()
                                         } else {
                                             currentStep = 1
                                         }
                                     },
-                                    enabled = selectedMachines.isNotEmpty() && (!selectedMachines.contains("دیگر مشینیں") || customMachineName.trim().isNotEmpty())
+                                    enabled = machineQuantities.values.any { it > 0 } && (!machineQuantities.containsKey("دیگر مشینیں") || customMachineName.trim().isNotEmpty())
                                 )
                             }
                         }
                     }
+                }
 
-                    // --- STEP 1: Quantity selection ---
+                    
+    // --- Machine Quantity Dialog ---
+    if (machineToSetQuantity != null) {
+        val data = machineToSetQuantity!!
+        var tempQty by remember(machineToSetQuantity) { mutableStateOf(if (data.currentQty > 0) data.currentQty else 1) }
+        var dialogSelectedDistrict by remember(machineToSetQuantity) { mutableStateOf(selectedDistrict) }
+
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { machineToSetQuantity = null },
+            confirmButton = {
+                UrduButton(
+                    text = "محفوظ کریں",
+                    onClick = {
+                        machineQuantities = if (tempQty > 0) {
+                            machineQuantities + (data.name to tempQty)
+                        } else {
+                            machineQuantities - data.name
+                        }
+                        selectedDistrict = dialogSelectedDistrict
+                        machineToSetQuantity = null
+                    },
+                    enabled = tempQty >= 0 && (tempQty == 0 || dialogSelectedDistrict != null)
+                )
+            },
+            dismissButton = {
+                androidx.compose.material3.TextButton(
+                    onClick = {
+                        machineQuantities = machineQuantities - data.name
+                        machineToSetQuantity = null
+                    }
+                ) {
+                    Text("منسوخ", color = Color.Gray)
+                }
+            },
+            title = {
+                Box(modifier = Modifier.fillMaxWidth()) {
+                    Text(
+                        text = if (data.name == "دیگر مشینیں" && customMachineName.isNotEmpty()) customMachineName else data.name,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 18.sp,
+                        color = AgriGreenPrimary,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth().align(Alignment.Center)
+                    )
+                    IconButton(
+                        onClick = { machineToSetQuantity = null },
+                        modifier = Modifier.align(Alignment.CenterEnd).size(24.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = "Close",
+                            tint = Color.Gray
+                        )
+                    }
+                }
+            },
+            text = {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    // 1. Image Pager Slider
+                    val pagerState = rememberPagerState(pageCount = { data.imageUrls.size.coerceAtLeast(1) })
+                    Box(modifier = Modifier.fillMaxWidth().height(180.dp)) {
+                        HorizontalPager(
+                            state = pagerState,
+                            modifier = Modifier.fillMaxSize()
+                        ) { page ->
+                            val url = data.imageUrls.getOrNull(page)
+                            if (!url.isNullOrEmpty()) {
+                                coil.compose.SubcomposeAsyncImage(
+                                    model = url,
+                                    contentDescription = data.name,
+                                    contentScale = ContentScale.Fit,
+                                    loading = {
+                                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                            CircularProgressIndicator(color = AgriGreenPrimary, modifier = Modifier.size(24.dp))
+                                        }
+                                    },
+                                    error = {
+                                        Image(
+                                            painter = painterResource(id = data.drawableResId),
+                                            contentDescription = data.name,
+                                            modifier = Modifier.fillMaxSize().padding(8.dp)
+                                        )
+                                    },
+                                    modifier = Modifier.fillMaxSize().padding(8.dp)
+                                )
+                            } else {
+                                Image(
+                                    painter = painterResource(id = data.drawableResId),
+                                    contentDescription = data.name,
+                                    modifier = Modifier.fillMaxSize().padding(8.dp)
+                                )
+                            }
+                        }
+                        
+                        if (data.imageUrls.size > 1) {
+                            Row(
+                                Modifier
+                                    .wrapContentHeight()
+                                    .fillMaxWidth()
+                                    .align(Alignment.BottomCenter)
+                                    .padding(bottom = 8.dp),
+                                horizontalArrangement = Arrangement.Center
+                            ) {
+                                repeat(data.imageUrls.size) { iteration ->
+                                    val color = if (pagerState.currentPage == iteration) AgriGreenPrimary else Color.LightGray
+                                    Box(
+                                        modifier = Modifier
+                                            .padding(2.dp)
+                                            .clip(CircleShape)
+                                            .background(color)
+                                            .size(6.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                    
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    Text(
+                        text = stringResource(id = R.string.prompt_how_many_machines),
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.padding(horizontal = 8.dp)
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    
+                    Row(
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        IconButton(
+                            onClick = { if (tempQty > 1) tempQty-- },
+                            modifier = Modifier.background(AgriGreenLight, CircleShape).size(40.dp)
+                        ) {
+                            Icon(Icons.Default.Remove, "Decrease", tint = AgriGreenPrimary)
+                        }
+                        
+                        Text(
+                            text = "$tempQty",
+                            fontSize = 24.sp,
+                            fontWeight = FontWeight.Black,
+                            modifier = Modifier.padding(horizontal = 24.dp)
+                        )
+
+                        IconButton(
+                            onClick = { tempQty++ },
+                            modifier = Modifier.background(AgriGreenLight, CircleShape).size(40.dp)
+                        ) {
+                            Icon(Icons.Default.Add, "Increase", tint = AgriGreenPrimary)
+                        }
+                    }
+                    
+                    Spacer(modifier = Modifier.height(20.dp))
+
+                    // 3. District selector section
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalAlignment = Alignment.Start
+                    ) {
+                        Text(
+                            text = "ضلع منتخب کریں",
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = AgriGreenPrimary,
+                            modifier = Modifier.padding(bottom = 8.dp)
+                        )
+                        
+                        var dropdownExpanded by remember { mutableStateOf(false) }
+                        
+                        ExposedDropdownMenuBox(
+                            expanded = dropdownExpanded,
+                            onExpandedChange = { dropdownExpanded = !dropdownExpanded }
+                        ) {
+                            OutlinedTextField(
+                                value = dialogSelectedDistrict ?: "ضلع منتخب کریں",
+                                onValueChange = {},
+                                readOnly = true,
+                                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = dropdownExpanded) },
+                                modifier = Modifier.fillMaxWidth().menuAnchor(),
+                                shape = RoundedCornerShape(12.dp),
+                                textStyle = TextStyle(fontSize = 15.sp),
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedBorderColor = AgriGreenPrimary,
+                                    unfocusedBorderColor = Color.Gray,
+                                    focusedTextColor = Color.Black,
+                                    unfocusedTextColor = if (dialogSelectedDistrict == null) Color.Gray else Color.Black
+                                )
+                            )
+                            
+                            ExposedDropdownMenu(
+                                expanded = dropdownExpanded,
+                                onDismissRequest = { dropdownExpanded = false },
+                                modifier = Modifier.background(Color.White)
+                            ) {
+                                districtNames.forEach { distName ->
+                                    DropdownMenuItem(
+                                        text = { Text(text = distName, fontSize = 16.sp) },
+                                        onClick = {
+                                            dialogSelectedDistrict = distName
+                                            dropdownExpanded = false
+                                        }
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            containerColor = Color.White,
+            shape = RoundedCornerShape(16.dp)
+        )
+    }
+
+                    // --- STEP 3: Phone Number Input ---
                     if (currentStep >= 1) {
                         StepContainer(
                             stepIndex = 1,
                             currentStep = currentStep,
-                            title = stringResource(id = R.string.step_qty_title),
-                            summaryText = stringResource(id = R.string.summary_qty, quantity ?: 1),
-                            isCompleted = quantity != null && currentStep > 1,
+                            title = stringResource(id = R.string.step_phone_title),
+                            summaryText = stringResource(id = R.string.summary_phone, phoneNumber),
+                            isCompleted = fullName.trim().isNotEmpty() && phoneNumber.length >= 10 && cnic.length >= 13 && currentStep > 1,
                             onEditClick = { currentStep = 1 }
                         ) {
                             Column(modifier = Modifier.fillMaxWidth()) {
                                 Text(
-                                    text = stringResource(id = R.string.step_qty_prompt),
-                                    fontSize = 16.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = AgriGreenPrimary,
-                                    modifier = Modifier.padding(bottom = 16.dp)
-                                )
-
-                                // Quick Select Numbers Row
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    repeat(5) { i ->
-                                        val num = i + 1
-                                        val isSelected = quantity == num
-                                        val label = if (num == 5) "5+" else num.toString()
-
-                                        Box(
-                                            modifier = Modifier
-                                                .size(52.dp)
-                                                .clip(CircleShape)
-                                                .background(if (isSelected) AgriGreenPrimary else AgriGreenLight)
-                                                .border(
-                                                    border = BorderStroke(
-                                                        2.dp,
-                                                        if (isSelected) AgriGreenPrimary else Color.Transparent
-                                                    ),
-                                                    shape = CircleShape
-                                                )
-                                                .clickable {
-                                                    quantity = num
-                                                    currentStep = 2
-                                                },
-                                            contentAlignment = Alignment.Center
-                                        ) {
-                                            Text(
-                                                text = label,
-                                                color = if (isSelected) Color.White else AgriGreenPrimary,
-                                                fontSize = 18.sp,
-                                                fontWeight = FontWeight.Bold
-                                            )
-                                        }
-                                    }
-                                }
-
-                                Spacer(modifier = Modifier.height(20.dp))
-
-                                // Custom counter controls
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.Center,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    IconButton(
-                                        onClick = {
-                                            val cur = quantity ?: 1
-                                            if (cur > 1) quantity = cur - 1
-                                        },
-                                        modifier = Modifier
-                                            .background(AgriGreenLight, CircleShape)
-                                            .size(40.dp)
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Default.Remove,
-                                            contentDescription = "Decrease",
-                                            tint = AgriGreenPrimary
-                                        )
-                                    }
-                                    
-                                    Text(
-                                        text = "${quantity ?: 1} مشینیں",
-                                        fontSize = 20.sp,
-                                        fontWeight = FontWeight.Black,
-                                        color = Color.Black,
-                                        modifier = Modifier.padding(horizontal = 24.dp)
-                                    )
-
-                                    IconButton(
-                                        onClick = {
-                                            val cur = quantity ?: 1
-                                            quantity = cur + 1
-                                        },
-                                        modifier = Modifier
-                                            .background(AgriGreenLight, CircleShape)
-                                            .size(40.dp)
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Default.Add,
-                                            contentDescription = "Increase",
-                                            tint = AgriGreenPrimary
-                                        )
-                                    }
-                                }
-
-                                Spacer(modifier = Modifier.height(20.dp))
-
-                                UrduButton(
-                                    text = stringResource(id = R.string.btn_continue),
-                                    onClick = {
-                                        if (quantity == null) quantity = 1
-                                        currentStep = 2
-                                    }
-                                )
-                            }
-                        }
-                    }
-
-                    // --- STEP 2: District Dropdown ---
-                    if (currentStep >= 2) {
-                        StepContainer(
-                            stepIndex = 2,
-                            currentStep = currentStep,
-                            title = stringResource(id = R.string.step_district_title),
-                            summaryText = stringResource(id = R.string.summary_district, selectedDistrict ?: ""),
-                            isCompleted = selectedDistrict != null && currentStep > 2,
-                            onEditClick = { currentStep = 2 }
-                        ) {
-                            Column(modifier = Modifier.fillMaxWidth()) {
-                                Text(
-                                    text = stringResource(id = R.string.step_district_prompt),
+                                    text = stringResource(id = R.string.register_name),
                                     fontSize = 16.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = AgriGreenPrimary,
                                     modifier = Modifier.padding(bottom = 12.dp)
                                 )
 
-                                var dropdownExpanded by remember { mutableStateOf(false) }
-
-                                ExposedDropdownMenuBox(
-                                    expanded = dropdownExpanded,
-                                    onExpandedChange = { dropdownExpanded = !dropdownExpanded }
-                                ) {
-                                    OutlinedTextField(
-                                        value = selectedDistrict ?: "اپنا ضلع منتخب کریں",
-                                        onValueChange = {},
-                                        readOnly = true,
-                                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = dropdownExpanded) },
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .menuAnchor(),
-                                        shape = RoundedCornerShape(12.dp),
-                                        colors = OutlinedTextFieldDefaults.colors(
-                                            focusedBorderColor = AgriGreenPrimary,
-                                            unfocusedBorderColor = Color.Gray,
-                                            focusedTextColor = Color.Black,
-                                            unfocusedTextColor = if (selectedDistrict == null) Color.Gray else Color.Black
-                                        )
-                                    )
-                                    ExposedDropdownMenu(
-                                        expanded = dropdownExpanded,
-                                        onDismissRequest = { dropdownExpanded = false },
-                                        modifier = Modifier.background(Color.White)
-                                    ) {
-                                        districts.forEach { dist ->
-                                            DropdownMenuItem(
-                                                text = { Text(text = dist, fontSize = 16.sp) },
-                                                onClick = {
-                                                    selectedDistrict = dist
-                                                    dropdownExpanded = false
-                                                    currentStep = 3
-                                                }
-                                            )
-                                        }
-                                    }
-                                }
+                                UrduTextField(
+                                    value = fullName,
+                                    onValueChange = { 
+                                        fullName = it
+                                        nameError = null
+                                    },
+                                    label = stringResource(id = R.string.register_name),
+                                    placeholder = "مثلاً: احمد خان",
+                                    isPhoneNumber = false,
+                                    errorText = nameError
+                                )
 
                                 Spacer(modifier = Modifier.height(16.dp))
 
-                                UrduButton(
-                                    text = stringResource(id = R.string.btn_continue),
-                                    onClick = {
-                                        if (selectedDistrict != null) {
-                                            currentStep = 3
-                                        } else {
-                                            Toast.makeText(context, "براہ کرم ضلع کا انتخاب کریں", Toast.LENGTH_SHORT).show()
-                                        }
-                                    },
-                                    enabled = selectedDistrict != null
+                                Text(
+                                    text = "شناختی کارڈ نمبر",
+                                    fontSize = 16.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = AgriGreenPrimary,
+                                    modifier = Modifier.padding(bottom = 12.dp)
                                 )
-                            }
-                        }
-                    }
 
-                    // --- STEP 3: Phone Number Input ---
-                    if (currentStep >= 3) {
-                        StepContainer(
-                            stepIndex = 3,
-                            currentStep = currentStep,
-                            title = stringResource(id = R.string.step_phone_title),
-                            summaryText = stringResource(id = R.string.summary_phone, phoneNumber),
-                            isCompleted = phoneNumber.length >= 10 && currentStep > 3,
-                            onEditClick = { currentStep = 3 }
-                        ) {
-                            Column(modifier = Modifier.fillMaxWidth()) {
+                                CNICInputField(
+                                    cnic = cnic,
+                                    onCnicChange = { input ->
+                                        cnic = input
+                                        cnicError = null
+                                    },
+                                    isError = cnicError != null,
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+
+                                if (cnicError != null) {
+                                    Text(
+                                        text = cnicError ?: "",
+                                        color = Color.Red,
+                                        fontSize = 12.sp,
+                                        modifier = Modifier.padding(top = 4.dp, start = 8.dp)
+                                    )
+                                }
+                                
+                                Spacer(modifier = Modifier.height(16.dp))
+
                                 Text(
                                     text = stringResource(id = R.string.step_phone_prompt),
                                     fontSize = 16.sp,
@@ -551,7 +729,6 @@ fun RegisterAgriculturalMachineryScreen(
                                      isError = phoneError != null,
                                      modifier = Modifier.fillMaxWidth()
                                  )
-
                                  if (phoneError != null) {
                                      Text(
                                          text = phoneError ?: "",
@@ -564,54 +741,99 @@ fun RegisterAgriculturalMachineryScreen(
                                 Spacer(modifier = Modifier.height(16.dp))
 
                                 // WhatsApp green button
-                                Button(
-                                    onClick = {
-                                        if (phoneNumber.startsWith("03") && phoneNumber.length == 11) {
-                                            phoneError = null
-                                            Toast.makeText(
-                                                context,
-                                                context.getString(R.string.msg_verification_code_sent),
-                                                Toast.LENGTH_SHORT
-                                            ).show()
-                                            currentStep = 4
-                                        } else {
-                                            phoneError = context.getString(R.string.err_invalid_phone)
-                                        }
-                                    },
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .height(56.dp),
-                                    shape = RoundedCornerShape(16.dp),
-                                    colors = ButtonDefaults.buttonColors(
-                                        containerColor = Color(0xFF25D366),
-                                        contentColor = Color.White
-                                    )
-                                ) {
-                                    Row(
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.Center
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Default.Sms,
-                                            contentDescription = "WhatsApp Icon",
-                                            modifier = Modifier.size(24.dp)
-                                        )
-                                        Spacer(modifier = Modifier.width(10.dp))
-                                        Text(
-                                            text = stringResource(id = R.string.btn_get_otp),
-                                            fontSize = 16.sp,
-                                            fontWeight = FontWeight.Bold
-                                        )
-                                    }
-                                }
+                                 Button(
+                                     onClick = {
+                                         if (fullName.trim().isEmpty() || 
+                                             fullName.trim() == "معزز کاشتکار" || 
+                                             fullName.trim() == "کاشتکار معزز") {
+                                             nameError = context.getString(R.string.err_enter_original_name)
+                                             return@Button
+                                         }
+                                         if (cnic.length < 13) {
+                                             cnicError = "درست شناختی کارڈ نمبر درج کریں"
+                                             return@Button
+                                         }
+                                         if (phoneNumber.startsWith("03") && phoneNumber.length == 11) {
+                                             phoneError = null
+                                             isSubmitting = true
+                                             val finalMachineQuantities = machineQuantities.mapKeys { (mach, _) ->
+                                                 if (mach == "دیگر مشینیں") {
+                                                     customMachineName.trim().ifEmpty { mach }
+                                                 } else {
+                                                     mach
+                                                 }
+                                             }
+                                             
+                                             viewModel.registerFarmerMachinery(
+                                                 machineQuantities = finalMachineQuantities,
+                                                 district = selectedDistrict ?: "سرگودھا",
+                                                 phoneNumber = phoneNumber,
+                                                 cnic = cnic,
+                                                 fullName = fullName,
+                                                 onSuccess = { response ->
+                                                     isSubmitting = false
+                                                     if (response.isOtpSent == true) {
+                                                         Toast.makeText(
+                                                             context,
+                                                             context.getString(R.string.msg_verification_code_sent),
+                                                             Toast.LENGTH_SHORT
+                                                         ).show()
+                                                         currentStep = 2
+                                                     } else {
+                                                         showSuccessDialog = true
+                                                     }
+                                                 },
+                                                 onError = { error ->
+                                                     isSubmitting = false
+                                                     Toast.makeText(context, error, Toast.LENGTH_LONG).show()
+                                                 }
+                                             )
+                                         } else {
+                                             phoneError = context.getString(R.string.err_invalid_phone)
+                                         }
+                                     },
+                                     modifier = Modifier
+                                         .fillMaxWidth()
+                                         .height(56.dp),
+                                     enabled = !isSubmitting,
+                                     shape = RoundedCornerShape(16.dp),
+                                     colors = ButtonDefaults.buttonColors(
+                                         containerColor = Color(0xFF25D366),
+                                         contentColor = Color.White
+                                     )
+                                 ) {
+                                     Row(
+                                         verticalAlignment = Alignment.CenterVertically,
+                                         horizontalArrangement = Arrangement.Center
+                                     ) {
+                                         if (isSubmitting) {
+                                             CircularProgressIndicator(
+                                                 color = Color.White,
+                                                 modifier = Modifier.size(24.dp)
+                                             )
+                                         } else {
+                                             Icon(
+                                                 imageVector = Icons.Default.Sms,
+                                                 contentDescription = "WhatsApp Icon",
+                                                 modifier = Modifier.size(24.dp)
+                                             )
+                                             Spacer(modifier = Modifier.width(10.dp))
+                                             Text(
+                                                 text = stringResource(id = R.string.btn_get_otp),
+                                                 fontSize = 16.sp,
+                                                 fontWeight = FontWeight.Bold
+                                             )
+                                         }
+                                     }
+                                 }
                             }
                         }
                     }
 
-                    // --- STEP 4: OTP Verification & Submit ---
-                    if (currentStep >= 4) {
+                    // --- STEP 3: OTP Verification & Submit ---
+                    if (currentStep >= 2) {
                         StepContainer(
-                            stepIndex = 4,
+                            stepIndex = 2,
                             currentStep = currentStep,
                             title = stringResource(id = R.string.step_otp_title),
                             summaryText = "",
@@ -647,35 +869,161 @@ fun RegisterAgriculturalMachineryScreen(
                                     isPhoneNumber = true
                                 )
 
-                                Spacer(modifier = Modifier.height(16.dp))
+                                 Spacer(modifier = Modifier.height(16.dp))
 
-                                UrduButton(
-                                    text = stringResource(id = R.string.btn_submit_application),
-                                    onClick = {
-                                        if (otpCode.length == 4) {
-                                            val finalMachineTypes = selectedMachines.map { mach ->
-                                                if (mach == "دیگر مشینیں") {
-                                                    customMachineName.trim()
-                                                } else {
-                                                    mach
-                                                }
-                                            }.filter { it.isNotEmpty() }
-
-                                            viewModel.registerFarmerMachinery(
-                                                machineTypes = finalMachineTypes,
-                                                quantity = quantity ?: 1,
-                                                district = selectedDistrict ?: "سرگودھا",
-                                                phoneNumber = phoneNumber,
-                                                onSuccess = onSuccess
-                                            )
-                                        } else {
-                                            otpError = context.getString(R.string.err_invalid_otp)
-                                        }
-                                    },
-                                    enabled = otpCode.length == 4
-                                )
+                                 UrduButton(
+                                     text = if (isSubmitting) "براہ کرم انتظار کریں..." else stringResource(id = R.string.btn_submit_application),
+                                     onClick = {
+                                         if (otpCode.length == 4) {
+                                             isSubmitting = true
+                                             if (user == null) {
+                                                 // Guest user needs OTP validation to get login response
+                                                 viewModel.selectRole(pk.kissanmadadgar.mobile.domain.model.UserRole.PROVIDER)
+                                                 viewModel.verifyOtp(
+                                                     phone = phoneNumber,
+                                                     otp = otpCode,
+                                                     guestToken = viewModel.getGuestToken(),
+                                                     type = "MACHINE_REGISTRATION",
+                                                     onSuccess = {
+                                                         isSubmitting = false
+                                                         showSuccessDialog = true
+                                                     },
+                                                     onError = { error ->
+                                                         isSubmitting = false
+                                                         otpError = error
+                                                     }
+                                                 )
+                                             } else {
+                                                 isSubmitting = false
+                                                 showSuccessDialog = true
+                                             }
+                                         } else {
+                                             otpError = context.getString(R.string.err_invalid_otp)
+                                         }
+                                     },
+                                     enabled = otpCode.length == 4 && !isSubmitting
+                                 )
                             }
                         }
+                    }
+                }
+            }
+        }
+        if (showSuccessDialog) {
+            SuccessDialog(
+                title = "درخواست موصول ہو گئی!",
+                message = "مشینری رجسٹریشن کی درخواست موصول ہو گئی ہے!",
+                onDismiss = {
+                    showSuccessDialog = false
+                    onSuccess()
+                }
+            )
+        }
+    }
+}
+
+@Composable
+fun SuccessDialog(
+    title: String,
+    message: String,
+    onDismiss: () -> Unit
+) {
+    androidx.compose.ui.window.Dialog(
+        onDismissRequest = { /* Do nothing to ensure it only closes with X button */ },
+        properties = androidx.compose.ui.window.DialogProperties(
+            usePlatformDefaultWidth = false
+        )
+    ) {
+        Card(
+            modifier = Modifier
+                .fillMaxWidth(0.9f)
+                .wrapContentHeight()
+                .padding(16.dp),
+            shape = RoundedCornerShape(24.dp),
+            colors = CardDefaults.cardColors(containerColor = Color.White),
+            elevation = CardDefaults.cardElevation(defaultElevation = 16.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(24.dp)
+            ) {
+                IconButton(
+                    onClick = onDismiss,
+                    modifier = Modifier.align(Alignment.TopStart)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Close,
+                        contentDescription = "Close",
+                        tint = Color.Gray
+                    )
+                }
+
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(90.dp)
+                            .clip(CircleShape)
+                            .background(Color(0xFFE8F5E9)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(70.dp)
+                                .clip(CircleShape)
+                                .background(Color(0xFFC8E6C9)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.CheckCircle,
+                                contentDescription = "Success",
+                                tint = Color(0xFF2E7D32),
+                                modifier = Modifier.size(45.dp)
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(24.dp))
+
+                    Text(
+                        text = title,
+                        fontSize = 22.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFF1B5E20),
+                        textAlign = TextAlign.Center
+                    )
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    Text(
+                        text = message,
+                        fontSize = 16.sp,
+                        color = Color.DarkGray,
+                        textAlign = TextAlign.Center,
+                        lineHeight = 24.sp
+                    )
+
+                    Spacer(modifier = Modifier.height(24.dp))
+
+                    Button(
+                        onClick = onDismiss,
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2E7D32)),
+                        modifier = Modifier
+                            .fillMaxWidth(0.8f)
+                            .height(48.dp)
+                    ) {
+                        Text(
+                            text = "ٹھیک ہے",
+                            color = Color.White,
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold
+                        )
                     }
                 }
             }
@@ -817,13 +1165,15 @@ private fun StepContainer(
 private fun MachineOptionCard(
     name: String,
     drawableResId: Int,
-    isSelected: Boolean,
+    imageUrl: String?,
+    quantity: Int?,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val isSelected = quantity != null
     Card(
         modifier = modifier
-            .height(160.dp) // Increased height to comfortably house a larger image + text
+            .height(190.dp)
             .clickable { onClick() },
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
@@ -839,18 +1189,25 @@ private fun MachineOptionCard(
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
             // Selected corner checkmark badge (aligned top-right/top-start depending on layout, we put it top-start)
-            if (isSelected) {
-                Box(
+            if (isSelected && (quantity ?: 0) > 0) {
+                Row(
                     modifier = Modifier
                         .align(Alignment.TopStart)
-                        .padding(8.dp)
-                        .size(18.dp)
-                        .background(AgriGreenPrimary, CircleShape),
-                    contentAlignment = Alignment.Center
+                        .padding(6.dp)
+                        .background(AgriGreenPrimary, RoundedCornerShape(12.dp))
+                        .padding(horizontal = 8.dp, vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
+                    Text(
+                        text = "تعداد: $quantity",
+                        color = Color.White,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
                     Icon(
-                        imageVector = Icons.Default.Check,
-                        contentDescription = "Selected",
+                        imageVector = Icons.Default.Edit,
+                        contentDescription = "Edit",
                         tint = Color.White,
                         modifier = Modifier.size(12.dp)
                     )
@@ -862,17 +1219,44 @@ private fun MachineOptionCard(
                 modifier = Modifier.fillMaxSize(),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Image(
-                    painter = painterResource(id = drawableResId),
-                    contentDescription = name,
-                    contentScale = ContentScale.Fit, // Fit content to avoid clipping
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(115.dp)
-                        .background(Color.White) // Solid white background
-                        .padding(8.dp) // Elegant padding to prevent touching card edges
-                        .clip(RoundedCornerShape(14.dp))
-                )
+                if (!imageUrl.isNullOrEmpty()) {
+                    coil.compose.SubcomposeAsyncImage(
+                        model = imageUrl,
+                        contentDescription = name,
+                        contentScale = ContentScale.Fit,
+                        loading = {
+                            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                CircularProgressIndicator(color = AgriGreenPrimary, modifier = Modifier.size(24.dp))
+                            }
+                        },
+                        error = {
+                            Image(
+                                painter = painterResource(id = drawableResId),
+                                contentDescription = name,
+                                contentScale = ContentScale.Fit,
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(145.dp)
+                            .background(Color.White)
+                            .padding(8.dp)
+                            .clip(RoundedCornerShape(14.dp))
+                    )
+                } else {
+                    Image(
+                        painter = painterResource(id = drawableResId),
+                        contentDescription = name,
+                        contentScale = ContentScale.Fit, // Fit content to avoid clipping
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(145.dp)
+                            .background(Color.White) // Solid white background
+                            .padding(8.dp) // Elegant padding to prevent touching card edges
+                            .clip(RoundedCornerShape(14.dp))
+                    )
+                }
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
                     text = name,

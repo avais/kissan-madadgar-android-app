@@ -70,6 +70,7 @@ class MainActivity : ComponentActivity() {
         override fun onLocationChanged(location: Location) {
             sharedViewModel?.updateUserLocation(location.latitude, location.longitude)
         }
+        @Deprecated("Deprecated in parent class")
         override fun onStatusChanged(provider: String?, status: Int, extras: Bundle?) {}
         override fun onProviderEnabled(provider: String) {}
         override fun onProviderDisabled(provider: String) {}
@@ -96,10 +97,14 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    @Suppress("DEPRECATION")
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (requestCode == 100 && grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-            startLocationUpdates()
+        if (requestCode == 100) {
+            val locationIndex = permissions.indexOf(Manifest.permission.ACCESS_FINE_LOCATION)
+            if (locationIndex != -1 && grantResults.isNotEmpty() && locationIndex < grantResults.size && grantResults[locationIndex] == PackageManager.PERMISSION_GRANTED) {
+                startLocationUpdates()
+            }
         }
     }
 
@@ -124,8 +129,18 @@ class MainActivity : ComponentActivity() {
         accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
         gyroscope = sensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE)
 
+        val permissionsToRequest = mutableListOf<String>()
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION), 100)
+            permissionsToRequest.add(Manifest.permission.ACCESS_FINE_LOCATION)
+            permissionsToRequest.add(Manifest.permission.ACCESS_COARSE_LOCATION)
+        }
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                permissionsToRequest.add(Manifest.permission.POST_NOTIFICATIONS)
+            }
+        }
+        if (permissionsToRequest.isNotEmpty()) {
+            ActivityCompat.requestPermissions(this, permissionsToRequest.toTypedArray(), 100)
         }
 
         setContent {
@@ -151,8 +166,8 @@ class MainActivity : ComponentActivity() {
                                         if (role != null && user != null) {
                                             val dest = when (role) {
                                                 pk.kissanmadadgar.mobile.domain.model.UserRole.FARMER -> Screen.FarmerHome.route
-                                                pk.kissanmadadgar.mobile.domain.model.UserRole.PROVIDER -> Screen.ProviderDashboard.route
-                                                pk.kissanmadadgar.mobile.domain.model.UserRole.ADMIN -> Screen.AdminDashboard.route
+                                                pk.kissanmadadgar.mobile.domain.model.UserRole.PROVIDER -> Screen.FarmerHome.route
+                                                pk.kissanmadadgar.mobile.domain.model.UserRole.ADMIN -> Screen.FarmerHome.route
                                             }
                                             navController.navigate(dest) {
                                                 popUpTo(Screen.Splash.route) { inclusive = true }
@@ -169,42 +184,35 @@ class MainActivity : ComponentActivity() {
                             composable(Screen.Onboarding.route) {
                                 OnboardingScreen(
                                     onFinish = {
-                                        navController.navigate(Screen.RoleSelection.route) {
+                                        navController.navigate(Screen.FarmerHome.route) {
                                             popUpTo(Screen.Onboarding.route) { inclusive = true }
                                         }
                                     }
                                 )
                             }
 
-                            composable(Screen.RoleSelection.route) {
-                                RoleSelectionScreen(
-                                    viewModel = viewModel,
-                                    onRoleSelected = { role ->
-                                        when (role) {
-                                            pk.kissanmadadgar.mobile.domain.model.UserRole.FARMER -> {
-                                                navController.navigate(Screen.FarmerHome.route)
-                                            }
-                                            pk.kissanmadadgar.mobile.domain.model.UserRole.PROVIDER -> {
-                                                navController.navigate(Screen.SupplierLogin.route)
-                                            }
-                                            pk.kissanmadadgar.mobile.domain.model.UserRole.ADMIN -> {
-                                                navController.navigate(Screen.AdminLogin.route)
-                                            }
-                                        }
+
+
+                            composable(
+                                route = Screen.FarmerLogin.route,
+                                arguments = listOf(
+                                    navArgument("requireCnic") {
+                                        type = NavType.BoolType
+                                        defaultValue = false
                                     }
                                 )
-                            }
-
-                            composable(Screen.FarmerLogin.route) {
+                            ) { backStackEntry ->
+                                val requireCnic = backStackEntry.arguments?.getBoolean("requireCnic") ?: false
                                 FarmerAuthScreen(
                                     viewModel = viewModel,
                                     onDismiss = { navController.popBackStack() },
                                     onSuccess = {
                                         navController.navigate(Screen.FarmerHome.route) {
-                                            popUpTo(Screen.RoleSelection.route) { inclusive = true }
+                                            popUpTo(Screen.FarmerHome.route) { inclusive = true }
                                         }
                                     },
-                                    isDialog = false
+                                    isDialog = false,
+                                    requireCnic = requireCnic
                                 )
                             }
 
@@ -214,53 +222,15 @@ class MainActivity : ComponentActivity() {
                                     onDismiss = { navController.popBackStack() },
                                     onSuccess = {
                                         navController.navigate(Screen.FarmerHome.route) {
-                                            popUpTo(Screen.RoleSelection.route) { inclusive = true }
+                                            popUpTo(Screen.FarmerHome.route) { inclusive = true }
                                         }
                                     },
                                     isDialog = false
                                 )
                             }
 
-                            composable(Screen.SupplierLogin.route) {
-                                SupplierLoginScreen(
-                                    viewModel = viewModel,
-                                    onNavigateToOtp = { cnic ->
-                                        navController.navigate(
-                                            Screen.SupplierOtp.createRoute(cnic)
-                                        )
-                                    },
-                                    onBack = { navController.popBackStack() }
-                                )
-                            }
 
-                            composable(
-                                route = Screen.SupplierOtp.route,
-                                arguments = listOf(navArgument("cnic") { type = NavType.StringType })
-                            ) { backStackEntry ->
-                                val cnic = backStackEntry.arguments?.getString("cnic") ?: ""
-                                SupplierOtpVerificationScreen(
-                                    cnic = cnic,
-                                    viewModel = viewModel,
-                                    onNavigateToHome = {
-                                        navController.navigate(Screen.ProviderDashboard.route) {
-                                            popUpTo(Screen.RoleSelection.route) { inclusive = true }
-                                        }
-                                    },
-                                    onBack = { navController.popBackStack() }
-                                )
-                            }
 
-                            composable(Screen.AdminLogin.route) {
-                                AdminLoginScreen(
-                                    viewModel = viewModel,
-                                    onSuccess = {
-                                        navController.navigate(Screen.AdminDashboard.route) {
-                                            popUpTo(Screen.RoleSelection.route) { inclusive = true }
-                                        }
-                                    },
-                                    onBack = { navController.popBackStack() }
-                                )
-                            }
 
                             composable(
                                 route = Screen.OtpVerification.route,
@@ -270,21 +240,14 @@ class MainActivity : ComponentActivity() {
                                 )
                             ) { backStackEntry ->
                                 val phone = backStackEntry.arguments?.getString("phoneNumber") ?: ""
-                                val role = backStackEntry.arguments?.getString("role") ?: "FARMER"
                                 
                                 OtpVerificationScreen(
                                     phoneNumber = phone,
                                     viewModel = viewModel,
                                     onSuccess = {
                                         Toast.makeText(this@MainActivity, getString(R.string.login_success_toast), Toast.LENGTH_SHORT).show()
-                                        if (role == "FARMER") {
-                                            navController.navigate(Screen.FarmerHome.route) {
-                                                popUpTo(Screen.RoleSelection.route) { inclusive = true }
-                                            }
-                                        } else {
-                                            navController.navigate(Screen.ProviderDashboard.route) {
-                                                popUpTo(Screen.RoleSelection.route) { inclusive = true }
-                                            }
+                                        navController.navigate(Screen.FarmerHome.route) {
+                                            popUpTo(Screen.FarmerHome.route) { inclusive = true }
                                         }
                                     },
                                     onBack = { navController.popBackStack() }
@@ -301,19 +264,14 @@ class MainActivity : ComponentActivity() {
                                     onNavigateToBooking = { machineryId ->
                                         navController.navigate(Screen.BookingConfirmation.createRoute(machineryId))
                                     },
-                                    onLoginRedirect = {
-                                        navController.navigate(Screen.FarmerLogin.route)
+                                    onLoginRedirect = { requireCnic ->
+                                        navController.navigate(Screen.FarmerLogin.createRoute(requireCnic))
                                     },
                                     onLogout = {
                                         viewModel.logout {
-                                            navController.navigate(Screen.RoleSelection.route) {
+                                            navController.navigate(Screen.FarmerHome.route) {
                                                 popUpTo(0) { inclusive = true }
                                             }
-                                        }
-                                    },
-                                    onNavigateToProviderDashboard = {
-                                        navController.navigate(Screen.ProviderDashboard.route) {
-                                            popUpTo(Screen.FarmerHome.route) { inclusive = true }
                                         }
                                     },
                                     onNavigateToRegisterMachinery = {
@@ -326,7 +284,6 @@ class MainActivity : ComponentActivity() {
                                 RegisterAgriculturalMachineryScreen(
                                     viewModel = viewModel,
                                     onSuccess = {
-                                        Toast.makeText(this@MainActivity, "مشینری رجسٹریشن کی درخواست موصول ہو گئی ہے!", Toast.LENGTH_LONG).show()
                                         navController.popBackStack()
                                     },
                                     onBack = { navController.popBackStack() }
@@ -343,7 +300,7 @@ class MainActivity : ComponentActivity() {
                                     viewModel = viewModel,
                                     onNavigateToBooking = {
                                         if (viewModel.currentUser.value == null) {
-                                            navController.navigate(Screen.FarmerLogin.route)
+                                            navController.navigate(Screen.FarmerLogin.createRoute(false))
                                         } else {
                                             navController.navigate(Screen.BookingConfirmation.createRoute(id))
                                         }
@@ -370,52 +327,8 @@ class MainActivity : ComponentActivity() {
                                 )
                             }
 
-                            // Provider Main Dash
-                            composable(Screen.ProviderDashboard.route) {
-                                ProviderDashboardScreen(
-                                    viewModel = viewModel,
-                                    onNavigateToAddMachinery = {
-                                        navController.navigate(Screen.RegisterAgriculturalMachinery.route)
-                                    },
-                                    onLogout = {
-                                        viewModel.logout {
-                                            navController.navigate(Screen.RoleSelection.route) {
-                                                popUpTo(0) { inclusive = true }
-                                            }
-                                        }
-                                    },
-                                    onNavigateToFarmerHome = {
-                                        navController.navigate(Screen.FarmerHome.route) {
-                                            popUpTo(Screen.ProviderDashboard.route) { inclusive = true }
-                                        }
-                                    }
-                                )
-                            }
 
-                            composable(Screen.AddMachinery.route) {
-                                AddMachineryScreen(
-                                    viewModel = viewModel,
-                                    onSuccess = {
-                                        Toast.makeText(this@MainActivity, getString(R.string.machinery_registration_toast), Toast.LENGTH_LONG).show()
-                                        navController.popBackStack()
-                                    },
-                                    onBack = { navController.popBackStack() }
-                                )
-                            }
 
-                            // Admin Main Dash
-                            composable(Screen.AdminDashboard.route) {
-                                AdminDashboardScreen(
-                                    viewModel = viewModel,
-                                    onLogout = {
-                                        viewModel.logout {
-                                            navController.navigate(Screen.RoleSelection.route) {
-                                                popUpTo(0) { inclusive = true }
-                                            }
-                                        }
-                                    }
-                                )
-                            }
                         }
                     }
                 }

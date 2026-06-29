@@ -2,6 +2,9 @@ package pk.kissanmadadgar.mobile.core.components
 
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.foundation.background
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
@@ -342,74 +345,76 @@ fun OTPInput(
     ),
     keyboardActions: androidx.compose.foundation.text.KeyboardActions = androidx.compose.foundation.text.KeyboardActions.Default
 ) {
-    Box(
-        modifier = modifier.fillMaxWidth(),
-        contentAlignment = Alignment.Center
-    ) {
-        // Visual Boxes (Drawn underneath)
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(16.dp),
-            verticalAlignment = Alignment.CenterVertically
+    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+        Box(
+            modifier = modifier.fillMaxWidth(),
+            contentAlignment = Alignment.Center
         ) {
-            for (i in 0 until 4) {
-                val char = if (i < otp.length) otp[i].toString() else ""
-                val isFocusedBox = i == otp.length
-                
-                val borderColor = animateColorAsState(
-                    targetValue = when {
-                        isError -> Color.Red
-                        isFocusedBox -> AgriGreenPrimary
-                        else -> Color.LightGray
-                    },
-                    animationSpec = androidx.compose.animation.core.tween(300)
-                )
-                
-                val scale = animateFloatAsState(
-                    targetValue = if (isFocusedBox) 1.05f else 1.0f,
-                    animationSpec = androidx.compose.animation.core.tween(150)
-                )
-                
-                Card(
-                    modifier = Modifier
-                        .size(64.dp)
-                        .graphicsLayer(scaleX = scale.value, scaleY = scale.value),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color.White),
-                    border = BorderStroke(2.dp, borderColor.value),
-                    elevation = CardDefaults.cardElevation(defaultElevation = if (isFocusedBox) 6.dp else 1.dp)
-                ) {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
+            // Visual Boxes (Drawn underneath)
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                for (i in 0 until 4) {
+                    val char = if (i < otp.length) otp[i].toString() else ""
+                    val isFocusedBox = i == otp.length
+                    
+                    val borderColor = animateColorAsState(
+                        targetValue = when {
+                            isError -> Color.Red
+                            isFocusedBox -> AgriGreenPrimary
+                            else -> Color.LightGray
+                        },
+                        animationSpec = androidx.compose.animation.core.tween(300)
+                    )
+                    
+                    val scale = animateFloatAsState(
+                        targetValue = if (isFocusedBox) 1.05f else 1.0f,
+                        animationSpec = androidx.compose.animation.core.tween(150)
+                    )
+                    
+                    Card(
+                        modifier = Modifier
+                            .size(64.dp)
+                            .graphicsLayer(scaleX = scale.value, scaleY = scale.value),
+                        shape = RoundedCornerShape(16.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color.White),
+                        border = BorderStroke(2.dp, borderColor.value),
+                        elevation = CardDefaults.cardElevation(defaultElevation = if (isFocusedBox) 6.dp else 1.dp)
                     ) {
-                        Text(
-                            text = char,
-                            fontSize = 26.sp,
-                            fontWeight = FontWeight.ExtraBold,
-                            color = Color.Black
-                        )
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = char,
+                                fontSize = 26.sp,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = Color.Black
+                            )
+                        }
                     }
                 }
             }
-        }
 
-        // Hidden input container drawn ON TOP of the visual boxes to intercept all gestures safely
-        androidx.compose.foundation.text.BasicTextField(
-            value = otp,
-            onValueChange = { input ->
-                val digits = input.filter { it.isDigit() }
-                if (digits.length <= 4) {
-                    onOtpChange(digits)
-                }
-            },
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(64.dp)
-                .focusRequester(focusRequester)
-                .graphicsLayer(alpha = 0.01f),
-            keyboardOptions = keyboardOptions,
-            keyboardActions = keyboardActions
-        )
+            // Hidden input container drawn ON TOP of the visual boxes to intercept all gestures safely
+            androidx.compose.foundation.text.BasicTextField(
+                value = otp,
+                onValueChange = { input ->
+                    val digits = input.filter { it.isDigit() }
+                    if (digits.length <= 4) {
+                        onOtpChange(digits)
+                    }
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(64.dp)
+                    .focusRequester(focusRequester)
+                    .graphicsLayer(alpha = 0.01f),
+                keyboardOptions = keyboardOptions,
+                keyboardActions = keyboardActions
+            )
+        }
     }
 }
 

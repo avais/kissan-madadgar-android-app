@@ -3,14 +3,10 @@ package pk.kissanmadadgar.mobile.core.navigation
 sealed class Screen(val route: String) {
     object Splash : Screen("splash")
     object Onboarding : Screen("onboarding")
-    object RoleSelection : Screen("role_selection")
-    object FarmerLogin : Screen("farmer_login")
-    object FarmerRegister : Screen("farmer_register")
-    object SupplierLogin : Screen("supplier_login")
-    object SupplierOtp : Screen("supplier_otp/{cnic}") {
-        fun createRoute(cnic: String) = "supplier_otp/$cnic"
+    object FarmerLogin : Screen("farmer_login?requireCnic={requireCnic}") {
+        fun createRoute(requireCnic: Boolean) = "farmer_login?requireCnic=$requireCnic"
     }
-    object AdminLogin : Screen("admin_login")
+    object FarmerRegister : Screen("farmer_register")
     object OtpVerification : Screen("otp_verification/{phoneNumber}/{role}") {
         fun createRoute(phoneNumber: String, role: String) = "otp_verification/$phoneNumber/$role"
     }
@@ -24,11 +20,4 @@ sealed class Screen(val route: String) {
         fun createRoute(machineryId: String) = "booking_confirmation/$machineryId"
     }
     object RegisterAgriculturalMachinery : Screen("register_agricultural_machinery")
-
-    // Provider Portal
-    object ProviderDashboard : Screen("provider_dashboard")
-    object AddMachinery : Screen("add_machinery")
-
-    // Admin Portal
-    object AdminDashboard : Screen("admin_dashboard")
 }

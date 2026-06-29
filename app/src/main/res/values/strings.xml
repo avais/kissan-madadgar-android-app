@@ -39,7 +39,7 @@
     <string name="err_phone_invalid">براہ کرم درست موبائل نمبر درج کریں</string>
     <string name="err_name_empty">براہ کرم اپنا نام درج کریں</string>
     <string name="err_cnic_invalid">درست شناختی کارڈ نمبر درج کریں</string>
-    <string name="err_otp_invalid">درج کردہ او ٹی پی کوڈ غلط ہے</string>
+    <string name="err_otp_invalid">درج کردہ کوڈ غلط ہے</string>
     <string name="err_email_invalid">براہ کرم درست ای میل درج کریں</string>
     <string name="err_pass_empty">براہ کرم پاس ورڈ درج کریں</string>
     
@@ -186,9 +186,9 @@
     <string name="placeholder_cnic">3740500000000</string>
     <string name="err_address_empty">براہ کرم اپنا پتہ درج کریں</string>
     <string name="err_cnic_empty">شناختی کارڈ نمبر درج کریں</string>
-    <string name="otp_placeholder">او ٹی پی کوڈ درج کریں (جیسے 0000)</string>
+    <string name="otp_placeholder">کوڈ درج کریں</string>
     <string name="err_otp_length">براہ کرم 4 ہندسوں کا کوڈ درج کریں</string>
-    <string name="demo_otp_hint">ڈیمو او ٹی پی کوڈ کے طور پر \'0000\' یا کوئی بھی 4 ہندسے درج کریں</string>
+    <string name="demo_otp_hint">کوڈ موصول ہونے میں کچھ سیکنڈ لگ سکتے ہیں</string>
     <string name="demo_admin_hint">ڈیمو لاگ ان: منتظم / پاس ورڈ 123</string>
 
     <!-- Admin Dashboard Additions -->
@@ -214,7 +214,7 @@
 
     <!-- MainViewModel Strings -->
     <string name="default_user_name">صارف</string>
-    <string name="err_invalid_otp_code">غلط او ٹی پی کوڈ</string>
+    <string name="err_invalid_otp_code">غلط کوڈ</string>
     <string name="err_registration_failed">رجسٹریشن ناکام ہو گئی</string>
     <string name="err_invalid_credentials">غلط اسناد</string>
 
@@ -237,9 +237,9 @@
     <string name="auth_req_phone_label">فون نمبر</string>
     <string name="auth_req_whatsapp">واٹس ایپ</string>
     <string name="auth_req_sms">ایس ایم ایس</string>
-    <string name="auth_req_otp_title">او ٹی پی درج کریں</string>
-    <string name="auth_req_otp_desc">ہم نے %1$s پر او ٹی پی بھیج دیا ہے۔</string>
-    <string name="auth_req_otp_label">او ٹی پی کوڈ</string>
+    <string name="auth_req_otp_title">کوڈ درج کریں</string>
+    <string name="auth_req_otp_desc">ہم نے %1$s پر کوڈ بھیج دیا ہے۔</string>
+    <string name="auth_req_otp_label">کوڈ</string>
     <string name="auth_req_verify_btn">تصدیق کریں</string>
     <string name="auth_req_back_btn">واپس</string>
 
@@ -255,10 +255,10 @@
     <string name="auth_req_close">بند کریں</string>
     <string name="auth_req_success">نمبر کی تصدیق کامیابی سے ہو گئی ہے!</string>
     <string name="auth_req_phone_error">موبائل نمبر 03 سے شروع اور 11 ہندسوں کا ہونا چاہیے</string>
-    <string name="auth_req_get_whatsapp_code">واٹس ایپ کے ذریعے کوڈ حاصل کریں</string>
+    <string name="auth_req_get_whatsapp_code">موبائل نمبر پر کوڈ حاصل کریں</string>
     <string name="auth_req_verify_title">نمبر کی تصدیق کریں</string>
-    <string name="auth_req_otp_desc_sent">ہم نے آپ کے نمبر پر 4 ہندسوں کا کوڈ بھیج دیا ہے۔ (ڈیفالٹ: 0000)</string>
-    <string name="auth_req_otp_length_error">او ٹی پی کوڈ 4 ہندسوں کا ہونا ضروری ہے</string>
+    <string name="auth_req_otp_desc_sent">ہم نے آپ کے نمبر پر 4 ہندسوں کا کوڈ بھیج دیا ہے۔</string>
+    <string name="auth_req_otp_length_error">کوڈ 4 ہندسوں کا ہونا ضروری ہے</string>
     <string name="auth_req_resend_code">کوڈ موصول نہیں ہوا؟ دوبارہ بھیجیں</string>
 
     <!-- Supplier Login / OTP Screens Strings -->
@@ -344,13 +344,13 @@
     <string name="step_qty_prompt">آپ کے پاس کل کتنی مشینیں ہیں؟</string>
     <string name="step_district_title">ضلع کا انتخاب</string>
     <string name="step_district_prompt">اپنے ضلع کا انتخاب کریں</string>
-    <string name="step_phone_title">موبائل نمبر</string>
+    <string name="step_phone_title">ذاتی معلومات</string>
     <string name="step_phone_prompt">اپنا موبائل نمبر درج کریں</string>
-    <string name="step_otp_title">او ٹی پی تصدیق</string>
-    <string name="step_otp_prompt">واٹس ایپ پر بھیجا گیا کوڈ درج کریں</string>
-    <string name="btn_get_otp">واٹس ایپ پر کوڈ حاصل کریں</string>
+    <string name="step_otp_title">کوڈ کی تصدیق</string>
+    <string name="step_otp_prompt">موبائل نمبر پر بھیجا گیا کوڈ درج کریں</string>
+    <string name="btn_get_otp">موبائل نمبر پر کوڈ حاصل کریں</string>
     <string name="btn_submit_application">درخواست جمع کروائیں</string>
-    <string name="msg_verification_code_sent">ہم نے واٹس ایپ کے ذریعے تصدیقی کوڈ بھیج دیا ہے۔</string>
+    <string name="msg_verification_code_sent">ہم نے موبائل نمبر کے ذریعے تصدیقی کوڈ بھیج دیا ہے۔</string>
     <string name="summary_machine">منتخب مشین: %1$s</string>
     <string name="summary_qty">تعداد: %1$d مشینیں</string>
     <string name="summary_district">ضلع: %1$s</string>
@@ -358,5 +358,7 @@
     <string name="btn_edit">تبدیل کریں</string>
     <string name="hint_enter_custom_machine">مشین کا نام درج کریں</string>
     <string name="err_invalid_phone">براہ کرم درست 11 ہندسوں کا موبائل نمبر درج کریں</string>
-    <string name="err_invalid_otp">براہ کرم 4 ہندسوں کا درست او ٹی پی درج کریں</string>
+    <string name="err_invalid_otp">براہ کرم 4 ہندسوں کا درست کوڈ درج کریں</string>
+    <string name="prompt_how_many_machines">آپ کے پاس کتنی مشینیں ہیں؟ تعداد منتخب کریں!</string>
+    <string name="err_enter_original_name">براہ کرم اپنا اصل نام درج کریں</string>
 </resources>

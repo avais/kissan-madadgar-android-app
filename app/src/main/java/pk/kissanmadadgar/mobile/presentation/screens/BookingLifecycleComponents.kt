@@ -1070,7 +1070,6 @@ fun BookingLifecycleCard(
                     }
 
                     // Phone Call Icon Button
-                    val context = LocalContext.current
                     IconButton(
                         onClick = {
                             try {
@@ -2178,10 +2177,6 @@ fun BookingDetailOverlay(
     var showRejectDialog by remember { mutableStateOf(false) }
     var rejectReason by remember { mutableStateOf("") }
 
-    val nextStep = lifecycleSteps().firstOrNull { step ->
-        booking.lifecyclePhotos.none { it.step == step.step }
-    }
-
     val context = LocalContext.current
     val cameraLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.TakePicturePreview()
@@ -2381,7 +2376,6 @@ fun BookingDetailOverlay(
                                         }
 
                                         // Phone Call Icon Button (consistent solid circle style, placed after phone details)
-                                        val context = LocalContext.current
                                         Box(
                                             modifier = Modifier
                                                 .size(38.dp)

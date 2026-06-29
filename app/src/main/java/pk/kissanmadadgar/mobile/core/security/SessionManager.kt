@@ -15,6 +15,14 @@ class SessionManager(context: Context) {
         return prefs.getString("auth_token", null)
     }
 
+    fun saveUserPhone(phone: String) {
+        prefs.edit().putString("user_phone", phone).apply()
+    }
+
+    fun getUserPhone(): String? {
+        return prefs.getString("user_phone", null)
+    }
+
     fun saveUserRole(role: UserRole) {
         prefs.edit().putString("user_role", role.name).apply()
     }
@@ -62,5 +70,29 @@ class SessionManager(context: Context) {
 
     fun getUserAddress(): String? {
         return prefs.getString("user_address", null)
+    }
+
+    fun saveUserCnic(cnic: String) {
+        prefs.edit().putString("user_cnic", cnic).apply()
+    }
+
+    fun getUserCnic(): String? {
+        return prefs.getString("user_cnic", null)
+    }
+
+    fun saveUserDistrict(district: String) {
+        prefs.edit().putString("user_district", district).apply()
+    }
+
+    fun getUserDistrict(): String? {
+        return prefs.getString("user_district", null)
+    }
+
+    fun saveGuestToken(token: String) {
+        prefs.edit().putString("guest_token", token).apply()
+    }
+
+    fun getGuestToken(): String? {
+        return prefs.getString("guest_token", null)
     }
 }
