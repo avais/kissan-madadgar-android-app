@@ -1,7 +1,7 @@
 package pk.kissanmadadgar.mobile.data.repository
 
 import pk.kissanmadadgar.mobile.core.security.SessionManager
-import pk.kissanmadadgar.mobile.data.mock.InMemoryAuthRepository
+import pk.kissanmadadgar.mobile.data.local.InMemoryAuthRepository
 import pk.kissanmadadgar.mobile.data.remote.api.AuthApiService
 import pk.kissanmadadgar.mobile.data.remote.dto.OtpRequestDto
 import pk.kissanmadadgar.mobile.data.remote.dto.VerifyOtpRequestDto
@@ -12,17 +12,32 @@ import pk.kissanmadadgar.mobile.data.remote.dto.RegisterMachineryResponse
 import pk.kissanmadadgar.mobile.data.remote.dto.GuestTokenRequest
 import pk.kissanmadadgar.mobile.data.remote.dto.GuestTokenResponse
 import pk.kissanmadadgar.mobile.data.remote.dto.MobileProfileResponse
+import pk.kissanmadadgar.mobile.data.remote.dto.SupportResponse
+import pk.kissanmadadgar.mobile.data.remote.dto.LocationRequestDto
+import pk.kissanmadadgar.mobile.data.remote.dto.AvailableMachinesResponseDto
+import pk.kissanmadadgar.mobile.data.remote.dto.MyMachinesResponseDto
+import pk.kissanmadadgar.mobile.data.remote.dto.RentalBookingRequest
+import pk.kissanmadadgar.mobile.data.remote.dto.UpdateProfileRequest
 import pk.kissanmadadgar.mobile.data.remote.safeApiCall
 import pk.kissanmadadgar.mobile.domain.model.User
 import pk.kissanmadadgar.mobile.domain.model.UserRole
+import pk.kissanmadadgar.mobile.domain.model.Machinery
+import pk.kissanmadadgar.mobile.domain.model.MachineryStatus
+import pk.kissanmadadgar.mobile.domain.model.Booking
+import pk.kissanmadadgar.mobile.domain.model.BookingStatus
+import pk.kissanmadadgar.mobile.data.remote.dto.RentalBookingResponseDto
+import pk.kissanmadadgar.mobile.data.remote.dto.RentalBookingsResponseDto
 import pk.kissanmadadgar.mobile.domain.repository.AuthRepository
+import android.content.Context
+import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
 class AuthRepositoryImpl @Inject constructor(
     private val authApiService: AuthApiService,
-    private val sessionManager: SessionManager
+    private val sessionManager: SessionManager,
+    @ApplicationContext private val context: Context
 ) : AuthRepository {
 
     // Delegate to keep in-memory mock functionalities working for endpoints not yet created in backend
@@ -69,8 +84,8 @@ class AuthRepositoryImpl @Inject constructor(
                 roles.contains("ROLE_FARMER") -> UserRole.FARMER
                 else -> role
             }
-            val id = responseDto.username ?: responseDto.cnic ?: responseDto.phone ?: ""
-            val name = (responseDto.firstName.orEmpty() + " " + responseDto.lastName.orEmpty()).trim()
+            val id = responseDto.userId?.toString() ?: responseDto.username ?: responseDto.cnic ?: responseDto.phone ?: ""
+            val name = responseDto.firstName.orEmpty().trim()
                 .ifEmpty { if (mappedRole == UserRole.FARMER) "کسان دوست" else "سروس پرووائیڈر" }
             
             val user = User(
@@ -126,11 +141,19 @@ class AuthRepositoryImpl @Inject constructor(
     }
 
     override suspend fun logout(): Result<Unit> {
+        try {
+            val uploadsDir = java.io.File(context.filesDir, "uploads")
+            if (uploadsDir.exists()) {
+                uploadsDir.deleteRecursively()
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("AuthRepositoryImpl", "Failed to clear cache on logout", e)
+        }
         return mockDelegate.logout()
     }
 
     override suspend fun getImplements(): Result<List<ImplementDto>> {
-        val token = sessionManager.getAuthToken() ?: ""
+        val token = sessionManager.getAuthToken() ?: sessionManager.getGuestToken() ?: ""
         val authHeader = if (token.startsWith("Bearer ")) token else "Bearer $token"
         return safeApiCall {
             authApiService.getImplements(authHeader)
@@ -138,7 +161,7 @@ class AuthRepositoryImpl @Inject constructor(
     }
 
     override suspend fun getDistricts(): Result<List<DistrictDto>> {
-        val token = sessionManager.getAuthToken() ?: ""
+        val token = sessionManager.getAuthToken() ?: sessionManager.getGuestToken() ?: ""
         val authHeader = if (token.startsWith("Bearer ")) token else "Bearer $token"
         return safeApiCall {
             authApiService.getDistricts(authHeader)
@@ -165,4 +188,289 @@ class AuthRepositoryImpl @Inject constructor(
             authApiService.getProfile(authHeader)
         }
     }
+
+    override suspend fun getSupport(module: String?): Result<SupportResponse> {
+        return safeApiCall {
+            authApiService.getSupport(module)
+        }
+    }
+
+    override suspend fun getAvailableMachines(
+        latitude: Double,
+        longitude: Double,
+        type: String,
+        page: Int,
+        size: Int,
+        districtId: Int?,
+        keyword: String?
+    ): Result<pk.kissanmadadgar.mobile.domain.model.PaginatedMachinery> {
+        val token = sessionManager.getAuthToken() ?: sessionManager.getGuestToken() ?: ""
+        val authHeader = if (token.startsWith("Bearer ")) token else "Bearer $token"
+        android.util.Log.d("KissanMadadgar", "Repo getAvailableMachines calling API with: lat=$latitude, lng=$longitude, token=$authHeader, type=$type, page=$page, size=$size, districtId=$districtId, keyword=$keyword")
+        val result = safeApiCall {
+            authApiService.getAvailableMachines(authHeader, LocationRequestDto(latitude, longitude, type = type, page = page, size = size, districtId = districtId, keyword = keyword ?: ""))
+        }
+        android.util.Log.d("KissanMadadgar", "Repo getAvailableMachines API result: $result")
+        return result.map { responseDto ->
+            val list = responseDto.content ?: emptyList()
+            val machines = list.mapIndexed { index, dto ->
+                val picUrls = dto.machinePictures ?: emptyList()
+                val parsedRating = dto.rating?.toDoubleOrNull() ?: 4.9
+                val nameUrdu = dto.machineName ?: dto.machineNameAlt ?: "سپر سیڈر"
+                Machinery(
+                    id = "machine_${page}_$index",
+                    providerId = "provider_${page}_$index",
+                    providerName = dto.farmerName ?: "معزز کاشتکار",
+                    providerPhone = dto.mobile ?: "03000000000",
+                    categoryId = "CAT_1",
+                    nameUr = nameUrdu,
+                    descriptionUr = dto.project?.projectName ?: "پنجاب کلین ائیر پروگرام (PCAP)",
+                    modelYear = 2026,
+                    hourlyRate = 0.0,
+                    // Prefer the machine's own coordinates (now returned by the backend) so map
+                    // pins reflect real positions; fall back to the requester's own location for
+                    // older responses that don't include per-machine lat/lng yet.
+                    latitude = dto.latitude ?: latitude,
+                    longitude = dto.longitude ?: longitude,
+                    isAvailable = true,
+                    status = MachineryStatus.APPROVED,
+                    imageUrls = picUrls,
+                    rating = parsedRating,
+                    acresDone = 12.0,
+                    distanceCoveredKm = 1.2,
+                    districtUr = dto.farmerDistrict ?: "سرگودھا",
+                    projectName = dto.project?.projectName,
+                    projectLogo = dto.project?.logo,
+                    subsidyText = dto.project?.subsidy,
+                    distanceText = dto.distance,
+                    fleetId = dto.fleetId
+                )
+            }
+            val resolvedTotalPages = responseDto.totalPages ?: 1
+            val resolvedCurrentPage = responseDto.page ?: page
+            pk.kissanmadadgar.mobile.domain.model.PaginatedMachinery(
+                machinery = machines,
+                totalPages = resolvedTotalPages,
+                totalElements = (responseDto.totalElements ?: machines.size).toLong(),
+                isLast = resolvedCurrentPage >= resolvedTotalPages - 1,
+                currentPage = resolvedCurrentPage
+            )
+        }
+    }
+
+    override suspend fun getMyMachines(page: Int, size: Int): Result<MyMachinesResponseDto> {
+        val token = sessionManager.getAuthToken() ?: sessionManager.getGuestToken() ?: ""
+        val authHeader = if (token.startsWith("Bearer ")) token else "Bearer $token"
+        return safeApiCall {
+            authApiService.getMyMachines(authHeader, page, size)
+        }
+    }
+
+    override suspend fun updateProfile(name: String, cnic: String, address: String, districtId: Long?, mobile: String): Result<Unit> {
+        val token = sessionManager.getAuthToken() ?: sessionManager.getGuestToken() ?: ""
+        val authHeader = if (token.startsWith("Bearer ")) token else "Bearer $token"
+        val userId = sessionManager.getUserId()?.toLongOrNull()
+        val request = UpdateProfileRequest(
+            userId = userId,
+            name = name,
+            cnic = cnic,
+            address = address,
+            districtId = districtId,
+            mobile = mobile
+        )
+        val result = safeApiCall {
+            authApiService.updateProfile(authHeader, request)
+        }
+        return result.map { }
+    }
+
+    override suspend fun createRentalBooking(
+        fleetId: Long?,
+        acres: Double,
+        date: String,
+        numberOfHours: Double,
+        latitude: Double,
+        longitude: Double,
+        farmingActivityAddress: String
+    ): Result<Unit> {
+        val token = sessionManager.getAuthToken() ?: sessionManager.getGuestToken() ?: ""
+        val authHeader = if (token.startsWith("Bearer ")) token else "Bearer $token"
+        val request = RentalBookingRequest(
+            fleetId = fleetId,
+            acres = acres,
+            date = date,
+            numberOfHours = numberOfHours,
+            latitude = latitude,
+            longitude = longitude,
+            farmingActivityAddress = farmingActivityAddress
+        )
+        val result = safeApiCall {
+            authApiService.createRentalBooking(authHeader, request)
+        }
+        return result.map { }
+    }
+
+    override suspend fun getRentalBookings(
+        status: String?,
+        page: Int?,
+        size: Int?,
+        id: String?,
+        keyword: String?
+    ): Result<pk.kissanmadadgar.mobile.domain.model.PaginatedBookings> {
+        val token = sessionManager.getAuthToken() ?: sessionManager.getGuestToken() ?: ""
+        val authHeader = if (token.startsWith("Bearer ")) token else "Bearer $token"
+        val result = safeApiCall {
+            authApiService.getRentalBookings(authHeader, status, page, size, id, keyword)
+        }
+        val mappedResult = result.map { responseDto ->
+            val list = responseDto.content ?: emptyList()
+            val bookings = list.mapIndexed { index, dto ->
+                val dateStr = dto.fleetRentalDate ?: ""
+                val parsedDate = System.currentTimeMillis()
+                
+                val statusStr = dto.rentalRequestStatusUrdu ?: dto.rentalRequestStatus
+                val mappedStatus = when (dto.rentalRequestStatus?.uppercase()) {
+                    "PENDING" -> BookingStatus.PENDING
+                    "ACCEPTED", "APPROVED" -> BookingStatus.ACCEPTED
+                    "REJECTED" -> BookingStatus.REJECTED
+                    "ACTIVE", "ONGOING", "STARTED_FROM_FARMER_SIDE", "STARTED_FROM_SERVICE_PROVIDER_SIDE" -> BookingStatus.ACTIVE
+                    "COMPLETED" -> BookingStatus.COMPLETED
+                    "CANCELLED" -> BookingStatus.CANCELLED
+                    else -> {
+                        when (statusStr) {
+                            "PENDING", "جدید بکنگ" -> BookingStatus.PENDING
+                            "ACCEPTED", "APPROVED", "منظور", "منظور شدہ" -> BookingStatus.ACCEPTED
+                            "REJECTED", "مسترد", "مسترد شدہ" -> BookingStatus.REJECTED
+                            "ACTIVE", "ONGOING", "کام جاری", "STARTED_FROM_FARMER_SIDE", "STARTED_FROM_SERVICE_PROVIDER_SIDE" -> BookingStatus.ACTIVE
+                            "COMPLETED", "مکمل" -> BookingStatus.COMPLETED
+                            "CANCELLED", "منسوخ" -> BookingStatus.CANCELLED
+                            else -> BookingStatus.PENDING
+                        }
+                    }
+                }
+                
+                val currentUserId = sessionManager.getUserId() ?: "usr_farmer"
+                val currentUserName = sessionManager.getUserName() ?: "معزز کاشتکار"
+                val currentUserPhone = sessionManager.getUserPhone() ?: ""
+
+                Booking(
+                    id = dto.fleetRentalId?.toString() ?: "booking_$index",
+                    farmerId = dto.serviceTakerId?.toString() ?: currentUserId,
+                    farmerName = getCleanName(currentUserName),
+                    farmerPhone = currentUserPhone,
+                    machineryId = dto.fleetRentalId?.toString() ?: "machine_unknown",
+                    machineryName = dto.machineDetails?.name ?: "زرعی مشین",
+                    bookingDate = dateStr,
+                    durationHours = dto.fleetRentalDuration?.toInt() ?: 4,
+                    totalPrice = 0.0,
+                    status = mappedStatus,
+                    createdAt = parsedDate,
+                    // Prefer the precise farming address the taker entered over the coarser
+                    // district field, when the backend actually sent one for this booking.
+                    locationUr = dto.farmingAddress?.takeIf { it.isNotBlank() }
+                        ?: dto.rentalDistrict
+                        ?: "مقام دستیاب نہیں",
+                    acres = dto.acre ?: 1.0,
+                    providerName = getCleanName(dto.name ?: dto.serviceProviderName ?: "سروس پرووائیڈر"),
+                    providerPhone = dto.serviceProviderMobile ?: "03000000000",
+                    machineryImageUrl = dto.machineDetails?.pictures?.firstOrNull(),
+                    isApprovalAllowed = dto.isApprovalAllowed ?: false,
+                    rentalRequestStatus = dto.rentalRequestStatus ?: "PENDING",
+                    rentalRequestStatusUrdu = dto.rentalRequestStatusUrdu ?: statusStr ?: "جدید بکنگ",
+                    serviceProviderId = dto.serviceProviderId,
+                    serviceTakerId = dto.serviceTakerId,
+                    isRatingDone = dto.isRatingDone ?: false
+                )
+            }
+            pk.kissanmadadgar.mobile.domain.model.PaginatedBookings(
+                bookings = bookings,
+                totalPages = responseDto.totalPages ?: 1,
+                totalElements = responseDto.totalElements ?: bookings.size.toLong(),
+                isLast = responseDto.last ?: true,
+                isFirst = responseDto.first ?: true,
+                currentPage = responseDto.number ?: 0
+            )
+        }
+
+        return mappedResult
+    }
+
+    override suspend fun approveBooking(bookingId: String): Result<String> {
+        val token = sessionManager.getAuthToken() ?: sessionManager.getGuestToken() ?: ""
+        val authHeader = if (token.startsWith("Bearer ")) token else "Bearer $token"
+        val result = safeApiCall {
+            authApiService.approveBooking(authHeader, bookingId)
+        }
+        return result.map { responseBody ->
+            val raw = responseBody.string()
+            try {
+                val map = com.google.gson.Gson().fromJson<Map<String, String>>(raw, object : com.google.gson.reflect.TypeToken<Map<String, String>>() {}.type)
+                map["message"] ?: raw
+            } catch (e: Exception) {
+                raw
+            }
+        }
+    }
+
+    override suspend fun rejectBooking(bookingId: String, reason: String?): Result<String> {
+        val token = sessionManager.getAuthToken() ?: sessionManager.getGuestToken() ?: ""
+        val authHeader = if (token.startsWith("Bearer ")) token else "Bearer $token"
+        val result = safeApiCall {
+            authApiService.rejectBooking(authHeader, bookingId, pk.kissanmadadgar.mobile.data.remote.api.RejectRequestBody(reason))
+        }
+        return result.map { responseBody ->
+            val raw = responseBody.string()
+            try {
+                val map = com.google.gson.Gson().fromJson<Map<String, String>>(raw, object : com.google.gson.reflect.TypeToken<Map<String, String>>() {}.type)
+                map["message"] ?: raw
+            } catch (e: Exception) {
+                raw
+            }
+        }
+    }
+
+    override suspend fun submitBookingFeedback(bookingId: String, rating: Int, comment: String): Result<String> {
+        val token = sessionManager.getAuthToken() ?: sessionManager.getGuestToken() ?: ""
+        val authHeader = if (token.startsWith("Bearer ")) token else "Bearer $token"
+        val result = safeApiCall {
+            authApiService.submitBookingFeedback(
+                authHeader,
+                pk.kissanmadadgar.mobile.data.remote.api.BookingFeedbackRequestDto(
+                    fleetRentalId = bookingId.toLongOrNull() ?: 0L,
+                    rating = rating,
+                    comments = comment
+                )
+            )
+        }
+        return result.map { responseBody ->
+            val raw = responseBody.string()
+            try {
+                val map = com.google.gson.Gson().fromJson<Map<String, String>>(raw, object : com.google.gson.reflect.TypeToken<Map<String, String>>() {}.type)
+                map["message"] ?: raw
+            } catch (e: Exception) {
+                raw
+            }
+        }
+    }
+}
+
+private fun getCleanName(name: String): String {
+    val trimmed = name.trim()
+    if (trimmed.isEmpty()) return trimmed
+
+    val parts = trimmed.split("\\s+".toRegex())
+    if (parts.size >= 2) {
+        val halfSize = parts.size / 2
+        if (parts.size % 2 == 0) {
+            val firstHalf = parts.subList(0, halfSize)
+            val secondHalf = parts.subList(halfSize, parts.size)
+            if (firstHalf == secondHalf) {
+                return firstHalf.joinToString(" ")
+            }
+        }
+        if (parts.size == 2 && parts[0] == parts[1]) {
+            return parts[0]
+        }
+    }
+    return trimmed
 }

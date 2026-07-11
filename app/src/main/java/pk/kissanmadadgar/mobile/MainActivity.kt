@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.LayoutDirection
@@ -121,6 +122,18 @@ class MainActivity : ComponentActivity() {
         locationManager.removeUpdates(locationListener)
     }
 
+    override fun onNewIntent(intent: android.content.Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        intent.getStringExtra("navigate_booking_id")?.let { bId ->
+            // Same deep-link target as the in-app notifications list (see NotificationsScreen's
+            // onClick) — land on the Bookings tab; FarmerBookingsTab (MyBookings.kt) resolves
+            // the booking, switches to its correct status filter, and opens its detail sheet.
+            sharedViewModel?.setSelectedTab(2)
+            sharedViewModel?.setNotificationBookingId(bId)
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
@@ -153,6 +166,17 @@ class MainActivity : ComponentActivity() {
                         val navController = rememberNavController()
                         val viewModel: MainViewModel = hiltViewModel()
                         sharedViewModel = viewModel
+
+                        LaunchedEffect(intent) {
+                            intent.getStringExtra("navigate_booking_id")?.let { bId ->
+                                // Same deep-link target as the in-app notifications list — land
+                                // on the Bookings tab; FarmerBookingsTab (MyBookings.kt) resolves
+                                // the booking, switches to its correct status filter, and opens
+                                // its detail sheet.
+                                viewModel.setSelectedTab(2)
+                                viewModel.setNotificationBookingId(bId)
+                            }
+                        }
 
                         NavHost(
                             navController = navController,
@@ -267,16 +291,45 @@ class MainActivity : ComponentActivity() {
                                     onLoginRedirect = { requireCnic ->
                                         navController.navigate(Screen.FarmerLogin.createRoute(requireCnic))
                                     },
+                                    // FarmerHomeScreen itself gates this on
+                                    // MainViewModel.requestLogout() (blocks on unsynced uploads)
+                                    // and only invokes this callback once logout actually
+                                    // completed — this is just the post-logout navigation.
                                     onLogout = {
-                                        viewModel.logout {
-                                            navController.navigate(Screen.FarmerHome.route) {
-                                                popUpTo(0) { inclusive = true }
-                                            }
+                                        navController.navigate(Screen.FarmerHome.route) {
+                                            popUpTo(0) { inclusive = true }
                                         }
                                     },
                                     onNavigateToRegisterMachinery = {
                                         navController.navigate(Screen.RegisterAgriculturalMachinery.route)
+                                    },
+                                    onNavigateToNotifications = {
+                                        navController.navigate(Screen.Notifications.route)
+                                    },
+                                    onNavigateToGovernmentSchemes = {
+                                        navController.navigate(Screen.GovernmentSchemes.route)
                                     }
+                                )
+                            }
+
+                            composable(Screen.Notifications.route) {
+                                NotificationsScreen(
+                                    viewModel = viewModel,
+                                    onBack = { navController.popBackStack() },
+                                    onNavigateToBooking = {
+                                        // Land back on the Bookings tab (index 2) so
+                                        // FarmerBookingsTab is actually composed and its
+                                        // notificationBookingId effect can run.
+                                        viewModel.setSelectedTab(2)
+                                        navController.popBackStack()
+                                    }
+                                )
+                            }
+
+                            composable(Screen.GovernmentSchemes.route) {
+                                GovernmentSchemesScreen(
+                                    viewModel = viewModel,
+                                    onBack = { navController.popBackStack() }
                                 )
                             }
 
@@ -284,6 +337,7 @@ class MainActivity : ComponentActivity() {
                                 RegisterAgriculturalMachineryScreen(
                                     viewModel = viewModel,
                                     onSuccess = {
+                                        viewModel.setSelectedTab(3)
                                         navController.popBackStack()
                                     },
                                     onBack = { navController.popBackStack() }
@@ -319,6 +373,7 @@ class MainActivity : ComponentActivity() {
                                     viewModel = viewModel,
                                     onSuccess = {
                                         Toast.makeText(this@MainActivity, getString(R.string.booking_success_toast), Toast.LENGTH_LONG).show()
+                                        viewModel.setSelectedTab(2)
                                         navController.navigate(Screen.FarmerHome.route) {
                                             popUpTo(Screen.FarmerHome.route) { inclusive = true }
                                         }

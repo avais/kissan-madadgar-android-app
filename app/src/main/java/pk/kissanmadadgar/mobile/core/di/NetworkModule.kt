@@ -16,7 +16,7 @@ import javax.inject.Singleton
 @InstallIn(SingletonComponent::class)
 object NetworkModule {
 
-    private const val BASE_URL = "http://192.168.100.249:9089/api/auth/android/"
+    private const val BASE_URL = pk.kissanmadadgar.mobile.core.AppConfig.BASE_URL
 
     @Provides
     @Singleton

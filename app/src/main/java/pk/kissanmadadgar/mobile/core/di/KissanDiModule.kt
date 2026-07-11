@@ -9,9 +9,11 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import pk.kissanmadadgar.mobile.core.security.SessionManager
 import pk.kissanmadadgar.mobile.data.local.KissanDatabase
-import pk.kissanmadadgar.mobile.data.mock.*
+import pk.kissanmadadgar.mobile.data.local.*
+import pk.kissanmadadgar.mobile.data.local.dao.BookingDao
 import pk.kissanmadadgar.mobile.data.remote.api.AuthApiService
 import pk.kissanmadadgar.mobile.data.repository.AuthRepositoryImpl
+import pk.kissanmadadgar.mobile.data.repository.BookingRepositoryImpl
 import pk.kissanmadadgar.mobile.domain.repository.*
 import javax.inject.Singleton
 
@@ -43,9 +45,10 @@ object KissanDiModule {
     @Singleton
     fun provideAuthRepository(
         authApiService: AuthApiService,
-        sessionManager: SessionManager
+        sessionManager: SessionManager,
+        @ApplicationContext context: Context
     ): AuthRepository {
-        return AuthRepositoryImpl(authApiService, sessionManager)
+        return AuthRepositoryImpl(authApiService, sessionManager, context)
     }
 
     @Provides
@@ -56,7 +59,16 @@ object KissanDiModule {
 
     @Provides
     @Singleton
-    fun provideBookingRepository(): BookingRepository {
-        return InMemoryBookingRepository()
+    fun provideBookingDao(database: KissanDatabase): BookingDao {
+        return database.bookingDao()
+    }
+
+    @Provides
+    @Singleton
+    fun provideBookingRepository(
+        bookingDao: BookingDao,
+        sessionManager: SessionManager
+    ): BookingRepository {
+        return BookingRepositoryImpl(bookingDao, sessionManager)
     }
 }

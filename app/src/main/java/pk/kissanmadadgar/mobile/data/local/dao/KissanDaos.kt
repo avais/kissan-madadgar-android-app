@@ -51,15 +51,53 @@ interface MachineryDao {
 
 @Dao
 interface BookingDao {
+    // Reactive read the UI ultimately observes — scoped to the currently logged-in account.
+    @Query("SELECT * FROM bookings WHERE owner_user_id = :ownerUserId ORDER BY created_at DESC")
+    fun observeBookings(ownerUserId: String): Flow<List<BookingEntity>>
+
+    // Unscoped, for the admin "all bookings" view.
+    @Query("SELECT * FROM bookings ORDER BY created_at DESC")
+    fun observeAllBookings(): Flow<List<BookingEntity>>
+
+    @Query("SELECT * FROM bookings WHERE id = :bookingId LIMIT 1")
+    suspend fun getById(bookingId: String): BookingEntity?
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertBooking(booking: BookingEntity)
+    suspend fun upsertOne(booking: BookingEntity)
 
-    @Query("SELECT * FROM bookings WHERE farmer_id = :farmerId")
-    fun getBookingsByFarmerFlow(farmerId: String): Flow<List<BookingEntity>>
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertAll(bookings: List<BookingEntity>)
 
-    @Query("SELECT * FROM bookings WHERE machinery_id IN (SELECT id FROM machinery WHERE provider_id = :providerId)")
-    fun getBookingsByProviderFlow(providerId: String): Flow<List<BookingEntity>>
+    @Query("DELETE FROM bookings WHERE owner_user_id = :ownerUserId")
+    suspend fun deleteAllForOwner(ownerUserId: String)
 
-    @Query("UPDATE bookings SET status = :status WHERE id = :bookingId")
-    suspend fun updateBookingStatus(bookingId: String, status: String)
+    // createBooking() inserts a client-fabricated placeholder row (id "book_" + a timestamp
+    // fragment) so the UI has something to show the instant a booking is submitted, before the
+    // server-confirmed row (with its real numeric id) comes back. Targeted delete — only ever
+    // touches placeholder rows — so it can run alongside upsertAll without the two racing calls
+    // ever needing to agree on a single combined snapshot (see BookingRepositoryImpl.setBookings
+    // vs upsertBookings for why a combined full-replace snapshot is unsafe under concurrency).
+    @Query("DELETE FROM bookings WHERE owner_user_id = :ownerUserId AND id LIKE 'book%'")
+    suspend fun deletePlaceholdersForOwner(ownerUserId: String)
+
+    // Full-replace semantics for a given owner: clears whatever was cached for them and writes
+    // the new snapshot in one transaction, matching the old in-memory setBookings() behavior
+    // (including the empty-list-on-logout case) but persisted.
+    @Transaction
+    suspend fun replaceAllForOwner(ownerUserId: String, bookings: List<BookingEntity>) {
+        deleteAllForOwner(ownerUserId)
+        if (bookings.isNotEmpty()) upsertAll(bookings)
+    }
+
+    @Query(
+        "UPDATE bookings SET status = :status, rental_request_status = :rentalRequestStatus, " +
+        "rental_request_status_urdu = :rentalRequestStatusUrdu, cached_at = :cachedAt WHERE id = :bookingId"
+    )
+    suspend fun updateStatusFields(
+        bookingId: String,
+        status: String,
+        rentalRequestStatus: String,
+        rentalRequestStatusUrdu: String,
+        cachedAt: Long
+    )
 }

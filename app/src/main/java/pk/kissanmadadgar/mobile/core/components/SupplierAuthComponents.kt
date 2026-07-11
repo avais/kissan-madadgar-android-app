@@ -237,9 +237,12 @@ fun CNICInputField(
         colors = OutlinedTextFieldDefaults.colors(
             focusedTextColor = Color.Black,
             unfocusedTextColor = Color.Black,
+            disabledTextColor = Color(0xFF333333),
             focusedBorderColor = if (isError) Color.Red else AgriGreenPrimary,
             unfocusedBorderColor = if (isError) Color.Red else Color.Gray,
+            disabledBorderColor = Color(0xFFCCCCCC),
             focusedLabelColor = if (isError) Color.Red else AgriGreenPrimary,
+            disabledLabelColor = Color(0xFF555555),
             errorBorderColor = Color.Red,
             errorLabelColor = Color.Red
         ),

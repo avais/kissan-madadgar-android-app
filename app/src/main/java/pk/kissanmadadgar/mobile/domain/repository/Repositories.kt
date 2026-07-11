@@ -9,6 +9,8 @@ import pk.kissanmadadgar.mobile.data.remote.dto.RegisterMachineryResponse
 import pk.kissanmadadgar.mobile.data.remote.dto.GuestTokenRequest
 import pk.kissanmadadgar.mobile.data.remote.dto.GuestTokenResponse
 import pk.kissanmadadgar.mobile.data.remote.dto.MobileProfileResponse
+import pk.kissanmadadgar.mobile.data.remote.dto.SupportResponse
+import pk.kissanmadadgar.mobile.data.remote.dto.MyMachinesResponseDto
 
 interface AuthRepository {
     suspend fun login(phone: String, cnic: String?, latitude: Double, longitude: Double): Result<String>
@@ -23,6 +25,37 @@ interface AuthRepository {
     suspend fun registerMachinery(payload: RegisterMachineryRequest): Result<RegisterMachineryResponse>
     suspend fun getGuestToken(request: GuestTokenRequest): Result<GuestTokenResponse>
     suspend fun getProfile(token: String): Result<MobileProfileResponse>
+    suspend fun getSupport(module: String? = null): Result<SupportResponse>
+    suspend fun getAvailableMachines(
+        latitude: Double,
+        longitude: Double,
+        type: String = "home",
+        page: Int = 0,
+        size: Int = 5,
+        districtId: Int? = null,
+        keyword: String? = null
+    ): Result<PaginatedMachinery>
+    suspend fun getMyMachines(page: Int = 0, size: Int = 10): Result<MyMachinesResponseDto>
+    suspend fun updateProfile(name: String, cnic: String, address: String, districtId: Long?, mobile: String): Result<Unit>
+    suspend fun createRentalBooking(
+        fleetId: Long?,
+        acres: Double,
+        date: String,
+        numberOfHours: Double,
+        latitude: Double,
+        longitude: Double,
+        farmingActivityAddress: String
+    ): Result<Unit>
+    suspend fun getRentalBookings(
+        status: String? = null,
+        page: Int? = null,
+        size: Int? = null,
+        id: String? = null,
+        keyword: String? = null
+    ): Result<pk.kissanmadadgar.mobile.domain.model.PaginatedBookings>
+    suspend fun approveBooking(bookingId: String): Result<String>
+    suspend fun rejectBooking(bookingId: String, reason: String?): Result<String>
+    suspend fun submitBookingFeedback(bookingId: String, rating: Int, comment: String): Result<String>
 }
 
 interface MachineryRepository {
@@ -42,4 +75,23 @@ interface BookingRepository {
     suspend fun updateBooking(booking: Booking): Result<Unit>
     suspend fun updateBookingStatus(bookingId: String, status: BookingStatus): Result<Unit>
     fun getAllBookingsAdmin(): Flow<List<Booking>>
+    // Full-replace for this owner — only appropriate when the caller genuinely means "this IS
+    // the complete set now" (e.g. clearing the cache on logout with an empty list). Any other
+    // caller computing a partial/merged snapshot from an in-memory list should use
+    // upsertBookings instead: two of these racing (e.g. a tab's own status-filtered refresh
+    // racing a targeted single-booking fetch) can otherwise silently delete whichever booking
+    // isn't in the snapshot that happens to write last.
+    fun setBookings(bookings: List<Booking>)
+    // Insert-or-update only these rows; never deletes anything else for the owner, so it's safe
+    // to call from multiple concurrent fetches without one clobbering another's rows.
+    fun upsertBookings(bookings: List<Booking>)
+    // Drops client-fabricated "book_..." placeholder rows (see createBooking) once a real,
+    // server-confirmed booking has arrived. Only ever touches placeholder ids, so it's safe to
+    // call alongside a concurrent upsertBookings without needing to combine them into one
+    // snapshot first.
+    fun clearPlaceholderBookings()
+
+    // Reactive, per-account cache read: emits whatever is persisted locally for [ownerKey]
+    // immediately on subscribe (cache-first), then again whenever the cache is updated.
+    fun observeBookings(ownerKey: String): Flow<List<Booking>>
 }

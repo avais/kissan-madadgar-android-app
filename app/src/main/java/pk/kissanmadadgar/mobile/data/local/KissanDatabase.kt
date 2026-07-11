@@ -16,7 +16,7 @@ import pk.kissanmadadgar.mobile.data.local.entity.*
         MachineryEntity::class,
         BookingEntity::class
     ],
-    version = 1,
+    version = 3,
     exportSchema = false
 )
 @TypeConverters(KissanConverters::class)

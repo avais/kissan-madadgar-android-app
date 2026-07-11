@@ -47,11 +47,13 @@ fun OtpVerificationScreen(
     LaunchedEffect(Unit) {
         otp = ""
         errorText = null
+        viewModel.fetchSupportInfo(module = "OTP")
     }
     
     val errOtpLength = stringResource(id = R.string.err_otp_length)
     val otpFocusRequester = remember { FocusRequester() }
     val otpSentMsg by viewModel.otpSentMessage.collectAsState()
+    val supportResponse by viewModel.supportResponse.collectAsState()
 
     Scaffold(
         containerColor = Color.White,
@@ -155,6 +157,18 @@ fun OtpVerificationScreen(
                     color = Color.Gray,
                     textAlign = TextAlign.Center
                 )
+
+                val supportMessage = supportResponse?.message
+                if (!supportMessage.isNullOrEmpty()) {
+                    Spacer(modifier = Modifier.height(24.dp))
+                    Text(
+                        text = supportMessage,
+                        fontSize = 13.sp,
+                        color = Color(0xFF555555),
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
             }
         }
     }

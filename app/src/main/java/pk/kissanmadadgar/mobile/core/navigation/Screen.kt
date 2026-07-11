@@ -20,4 +20,6 @@ sealed class Screen(val route: String) {
         fun createRoute(machineryId: String) = "booking_confirmation/$machineryId"
     }
     object RegisterAgriculturalMachinery : Screen("register_agricultural_machinery")
+    object Notifications : Screen("notifications")
+    object GovernmentSchemes : Screen("government_schemes")
 }

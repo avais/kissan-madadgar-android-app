@@ -51,7 +51,12 @@ data class Machinery(
     val rating: Double,
     val acresDone: Double = 0.0,
     val distanceCoveredKm: Double = 0.0,
-    val districtUr: String = "سرگودھا"
+    val districtUr: String = "سرگودھا",
+    val projectName: String? = null,
+    val projectLogo: String? = null,
+    val subsidyText: String? = null,
+    val distanceText: String? = null,
+    val fleetId: Long? = null
 )
 
 enum class MachineryStatus {
@@ -65,7 +70,7 @@ data class Booking(
     val farmerPhone: String = "",
     val machineryId: String,
     val machineryName: String,
-    val bookingDate: Long,
+    val bookingDate: String,
     val durationHours: Int,
     val totalPrice: Double,
     val status: BookingStatus,
@@ -75,12 +80,36 @@ data class Booking(
     val rejectionReason: String? = null,
     val lifecyclePhotos: List<BookingLifecyclePhoto> = emptyList(),
     val providerName: String = "میاں اختر رضوان",
-    val providerPhone: String = "03111234567"
+    val providerPhone: String = "03111234567",
+    val machineryImageUrl: String? = null,
+    val isApprovalAllowed: Boolean = false,
+    val rentalRequestStatus: String = "PENDING",
+    val rentalRequestStatusUrdu: String = "جدید بکنگ",
+    val serviceProviderId: Long? = null,
+    val serviceTakerId: Long? = null,
+    val isRatingDone: Boolean = false
 )
 
 enum class BookingStatus {
     PENDING, ACCEPTED, REJECTED, ACTIVE, COMPLETED, CANCELLED
 }
+
+data class PaginatedBookings(
+    val bookings: List<Booking>,
+    val totalPages: Int,
+    val totalElements: Long,
+    val isLast: Boolean,
+    val isFirst: Boolean,
+    val currentPage: Int
+)
+
+data class PaginatedMachinery(
+    val machinery: List<Machinery>,
+    val totalPages: Int,
+    val totalElements: Long,
+    val isLast: Boolean,
+    val currentPage: Int
+)
 
 enum class BookingPhotoStep {
     SERVICE_ACQUIRED, SUBSIDY_STARTED, WORK_COMPLETED, FARMER_CONFIRMATION

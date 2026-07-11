@@ -1,7 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">کسان مددگار</string>
-    
+
+    <!-- Push Notifications (FCM) -->
+    <string name="push_notification_channel_id" translatable="false">booking_updates_channel</string>
+    <string name="push_notification_channel_name">بکنگ اپڈیٹس</string>
+    <string name="push_notification_channel_description">کرائے کی بکنگ سے متعلق اطلاعات</string>
+
     <!-- Role Selection -->
     <string name="role_selection_title">آپ کون ہیں؟</string>
     <string name="role_selection_subtitle">استعمال کرنے کے لیے کردار کا انتخاب کریں</string>
@@ -51,9 +56,14 @@
     <string name="tab_map">نقشہ</string>
     
     <!-- Farmer UI -->
-    <string name="nearby_machinery">قریبی سپر سیڈر اور زرعی مشینیں</string>
+    <string name="nearby_machinery">قریبی سُپر سیڈر اور زرعی مشینیں</string>
     <string name="popular_categories">مقبول زمرے</string>
-    <string name="search_machinery_hint">مشینری تلاش کریں (مثلاً ٹریکٹر)...</string>
+    <string name="search_machinery_hint">مشینری تلاش کریں</string>
+    <string name="search_view_list">فہرست</string>
+    <string name="search_view_map">نقشہ</string>
+    <string name="select_district_hint">ضلع منتخب کریں</string>
+    <string name="select_district_all">تمام اضلاع</string>
+    <string name="tap_to_expand_map">بڑا نقشہ دیکھنے کے لیے دبائیں</string>
     <string name="hourly_rate_label">فی گھنٹہ کرایہ:</string>
     <string name="rs_per_hour">روپے / گھنٹہ</string>
     <string name="btn_book_now">ابھی بک کریں</string>
@@ -73,7 +83,7 @@
     <string name="cat_rotavator">روٹا ویٹر</string>
     <string name="cat_seed_drill">بیج بونے والی مشین</string>
     <string name="cat_cultivator">ہل</string>
-    <string name="cat_sprayer">اسپریئر</string>
+    <string name="cat_sprayer">اسُپریئر</string>
     <string name="cat_thresher">تھریشر</string>
     <string name="cat_laser_leveler">لیزر لیولر</string>
     <string name="cat_water_tanker">پانی کا ٹینکر</string>
@@ -103,7 +113,7 @@
     <!-- Phase 4 Additions & Localization -->
     <string name="user_guest_name">معزز کاشتکار</string>
     <string name="welcome_alert_message">خوش آمدید، %1$s! کسان مددگار پر آپ کا خیر مقدم ہے۔</string>
-    <string name="main_tab_subtitle">اپنے کھیت کے لیے بہترین جدید ترین مشینیں بک کریں</string>
+    <string name="main_tab_subtitle">اپنے کھیت کے لیے بہترین</string>
     <string name="user_location_title">آپ کا موجودہ مقام</string>
     <string name="hourly_rate_format">کرایہ: %1$d روپے</string>
     <string name="gps_active_label">جی پی ایس آن ہے</string>
@@ -173,7 +183,7 @@
     <!-- CommonScreens Localization -->
     <string name="splash_subtitle">زرعی مشینری آپ کے دروازے تک</string>
     <string name="onboarding_title_1">زرعی مشینری کی بکنگ</string>
-    <string name="onboarding_desc_1">قریبی سپر سیڈر اور زرعی مشینیں سیکنڈوں میں بک کریں اور مالک سے سیدھا رابطہ کریں۔</string>
+    <string name="onboarding_desc_1">قریبی سُپر سیڈر اور زرعی مشینیں سیکنڈوں میں بک کریں اور مالک سے سیدھا رابطہ کریں۔</string>
     <string name="onboarding_title_2">اپنی مشینری کرایہ پر دیں</string>
     <string name="onboarding_desc_2">اپنی مشینری ایپ پر رجسٹر کریں اور گھر بیٹھے روزانہ کی کمائی بڑھائیں۔</string>
     <string name="btn_next">اگلا</string>
@@ -206,11 +216,6 @@
     <string name="admin_bookings_count_dummy">1,840 بکنگز (مکمل)</string>
     <string name="admin_audit_logs_title">سسٹم آڈٹ لاگز</string>
     <string name="admin_btn_logout">منتظم لاگ آؤٹ</string>
-    <string name="admin_log_1">چوہدری اصغر علی نے مسی فرگوسن ٹریکٹر بک کر لیا۔</string>
-    <string name="admin_log_2">میاں اختر رضوان نے نئی مشینری \'بوم اسپریئر 500 لیٹر\' شامل کی۔</string>
-    <string name="admin_log_3">سید زین العابدین نے لاگ ان کیا۔</string>
-    <string name="admin_log_4">ٹریکٹر ایم ایف 385 کی بکنگ مکمل ہو گئی۔</string>
-    <string name="admin_log_5">چوہدری اصغر علی نے نئی بکنگ کی ادائیگی مکمل کی کلاؤڈ والٹ سے۔</string>
 
     <!-- MainViewModel Strings -->
     <string name="default_user_name">صارف</string>
@@ -220,13 +225,14 @@
 
     <!-- Phase 6 Additions -->
     <string name="home_stats_available">دستیاب مشینیں</string>
+    <string name="home_stats_map_select">نقشے سے منتخب کریں</string>
     <string name="home_stats_nearby">آپ کے قریب</string>
     <string name="home_stats_bookings">آپ کی بکنگز</string>
     <string name="provider_name_label">مالک:</string>
     <string name="provider_phone_label">فون:</string>
     <string name="model_year_format">ماڈل %1$d</string>
     <string name="distance_km_format">%1$s کلومیٹر دور</string>
-    <string name="featured_super_seeder">فیچرڈ سپر سیڈر</string>
+    <string name="featured_super_seeder">فیچرڈ سُپر سیڈر</string>
     <string name="login_success_toast">لاگ ان کامیاب ہو گیا</string>
     <string name="booking_success_toast">بکنگ کامیابی سے درج ہو گئی ہے</string>
     <string name="machinery_registration_toast">مشینری رجسٹریشن کی درخواست بھیج دی گئی ہے</string>
@@ -327,6 +333,7 @@
     <string name="help_pending">پہلے درخواست منظور ہوگی۔</string>
     <string name="help_rejected">درخواست مسترد ہو گئی، اس لیے یہ مرحلہ بند ہے۔</string>
     <string name="help_cancelled">درخواست منسوخ ہو گئی، اس لیے یہ مرحلہ بند ہے۔</string>
+    <string name="booking_explanation_voice_narration_provider">یہ بکنگ کی درخواست کسان %1$s کی طرف سے آپ کی مشین %2$s کے لیے، %3$s تاریخ کو کاشتکاری کا کام کرنے کے لیے موصول ہوئی ہے۔ جناب %4$s، براہ کرم اس درخواست کو دیکھنے کے بعد منظور یا مسترد فرمائیں۔</string>
     <string name="help_locked">پہلے اوپر والا مرحلہ مکمل ہوگا۔</string>
     <string name="help_your_turn">یہ آپ کی باری ہے۔ تصویر شامل کریں۔</string>
     <string name="help_other_turn_format">%1$s کی باری ہے۔</string>
@@ -336,7 +343,7 @@
     <string name="title_zarai_machine_register">زرعی مشین رجسٹر کریں</string>
     <string name="step_select_machine_title">زرعی مشین کا انتخاب</string>
     <string name="step_select_machine_prompt">آپ کے پاس کون سی زرعی مشین ہے؟</string>
-    <string name="machine_super_seeder">سپر سیڈر</string>
+    <string name="machine_super_seeder">سُپر سیڈر</string>
     <string name="machine_baler">بیلر</string>
     <string name="machine_harvester">ہارویسٹر</string>
     <string name="machine_others">دیگر مشینیں</string>
@@ -359,6 +366,156 @@
     <string name="hint_enter_custom_machine">مشین کا نام درج کریں</string>
     <string name="err_invalid_phone">براہ کرم درست 11 ہندسوں کا موبائل نمبر درج کریں</string>
     <string name="err_invalid_otp">براہ کرم 4 ہندسوں کا درست کوڈ درج کریں</string>
-    <string name="prompt_how_many_machines">آپ کے پاس کتنی مشینیں ہیں؟ تعداد منتخب کریں!</string>
+    <string name="prompt_how_many_machines">آپ کے پاس کتنی مشینیں ہیں؟</string>
     <string name="err_enter_original_name">براہ کرم اپنا اصل نام درج کریں</string>
+
+    <!-- Voice Booking Narrations -->
+    <string name="booking_voice_machine_info_narration">معزز %1$s صاحب! آپ کرائے پر %2$s کی بکنگ کرنے جا رہے ہیں، جس کے مالک کا نام %3$s ہے، جو کہ آپ سے %4$s کے فاصلے پر موجود ہیں۔ اس بکنگ پر آپ کو %5$s کے تحت، قرعہ اندازی پر %6$s کی سبسڈی دی جائے گی۔</string>
+    <string name="booking_voice_intro">چلو %1$s بھائی، اب بکنگ کا وقت منتخب کرتے ہیں۔ آپ %2$s کی بکنگ کر رہے ہیں، جس کے مالک %3$s ہیں۔ بتائیے، بکنگ کی تاریخ کیا رکھنی ہے؟</string>
+    <string name="booking_voice_date_confirmation">آپ کی بکنگ %1$s کی منتخب ہو گئی ہے۔ اب بتائیے، رقبہ کتنے ایکڑ ہے؟</string>
+    <string name="booking_voice_acres_confirmation">آپ کا رقبہ %1$s ایکڑ درج ہو گیا ہے۔ اب بتائیے، یہ کتنے گھنٹے کے لیے چاہیے؟</string>
+    <string name="booking_voice_hours_confirmation">آپ کی بکنگ کے لیے %1$d گھنٹے منتخب ہو گئے ہیں۔ شکریہ!</string>
+    <string name="booking_explanation_voice_narration">یہ بکنگ %1$s کی ہے، جس کے مالک کا نام %2$s ہے۔ یہ بکنگ %3$s تاریخ کو کاشتکاری کا کام کرنے کے لیے کی گئی ہے۔ مشینری کے مالک کو کال کر کے منظوری مانگ لیں۔</string>
+    <string name="booking_explanation_voice_narration_approved">معزز %1$s، یہ درخواست منظور ہو چکی ہے۔ اگر سروس فراہم کنندہ %2$s آپ کے پاس کاشتکاری کے کام کے لیے آ چکے ہیں، تو براہ کرم \'کاشتکاری شروع کریں\' کے بٹن پر کلک کریں۔</string>
+    <string name="booking_explanation_voice_narration_approved_provider">جناب %1$s، آپ نے کسان %2$s کی درخواست منظور کر لی ہے۔ براہ کرم مقررہ وقت پر کھیت پر پہنچ کر \'سروس شروع کریں\' یا \'QR کوڈ اسکین کر کے شروع کریں\' کے بٹن پر کلک کریں۔</string>
+    <string name="booking_explanation_voice_narration_rejected_provider">جناب %1$s، آپ نے یہ درخواست مسترد کر دی ہے۔</string>
+    <string name="booking_explanation_voice_narration_started_farmer_side_provider">جناب %1$s، کسان کاشتکاری کے کام کے لیے تیار ہے۔ براہ کرم \'کاشتکاری شروع کریں\' کے بٹن پر کلک کریں یا ان کے موبائل سے کیو آر کوڈ اسکین کریں۔</string>
+    <string name="booking_explanation_voice_narration_started_provider_side_provider">جناب %1$s، کاشتکاری کا کام جاری ہے۔ کام مکمل ہونے پر براہ کرم \'سروس روکیں\' کے بٹن پر کلک کریں۔</string>
+    <string name="booking_explanation_voice_narration_started_farmer_side_farmer">جناب %1$s، آپ نے اپنی جانب سے کاشتکاری کا کام شروع کر دیا ہے۔ اگر سروس فراہم کنندہ جناب %2$s آپ کے پاس پہنچ چکے ہیں، تو ان سے \'سروس کا آغاز کریں\' کے بٹن پر کلک کرنے کو کہیں، یا وہ آپ کے موبائل سے کیو آر کوڈ اسکین کر کے بھی تصدیق کر سکتے ہیں۔</string>
+    <string name="booking_explanation_voice_narration_started_provider_side_farmer">جناب %1$s، سروس فراہم کنندہ جناب %2$s نے آپ کے کھیت پر کاشتکاری کا کام باقاعدہ شروع کر دیا ہے۔ سروس اس وقت جاری ہے، کام مکمل ہونے پر آپ کو مطلع کر دیا جائے گا۔</string>
+    <string name="booking_explanation_voice_narration_completed_provider">جناب %1$s، آپ نے مشین %2$s کی کاشتکاری سروس %3$s تاریخ کو کامیابی سے مکمل کر لی ہے۔ کسان مددگار ایپ استعمال کرنے کا شکریہ۔</string>
+    <string name="booking_explanation_voice_narration_completed">معزز کسان، آپ کی مشین %1$s کی کاشتکاری سروس %2$s تاریخ کو کامیابی سے مکمل ہو چکی ہے۔ سروس فراہم کنندہ %3$s کی طرف سے کام مکمل کر دیا گیا ہے۔ کسان مددگار ایپ استعمال کرنے کا شکریہ۔</string>
+    <string name="camera_frame_voice_narration">معزز %1$s، براہ کرم اپنے کھیت کی ایک واضح تصویر کھینچیں تاکہ کاشتکاری کا کام شروع کیا جا سکے۔</string>
+    <string name="camera_frame_title_start">اپنے کھیت کی تصویر لیجیے</string>
+    <string name="camera_frame_title_complete">کام مکمل ہونے کی آخری تصویر لیجیے</string>
+    <string name="camera_frame_voice_narration_complete">معزز %1$s، براہ کرم کام مکمل ہونے کی ایک واضح تصویر کھینچیں تاکہ سروس کی تکمیل کی تصدیق کی جا سکے۔</string>
+    <string name="camera_frame_hear_guidance">رہنمائی سننے کے لیے کلک کریں</string>
+    <string name="camera_frame_cancel">منسوخ</string>
+    <string name="camera_frame_capture_button">تصویر کھینچیں</string>
+    <string name="booking_explanation_voice_narration_provider_approved">جناب %1$s، یہ درخواست جناب %2$s نے قبول کر لی ہے۔ کاشتکاری کے لیے جناب %2$s سے کہیں کاشتکاری کے بٹن پر کلک کریں یا ان کے موبائل سے کیو آر کوڈ اسکین کریں۔ کیو آر کوڈ اسکین کرنے کے لیے نیچے بٹن پر کلک کریں۔</string>
+<string name="welcome_voice_narration">السلام علیکم! میں ہوں کسان مددگار، محکمۂ زراعت، حکومتِ پنجاب کی جانب سے آپ کا اپنا ڈیجیٹل ساتھی۔
+میں آپ کی فصلوں اور کھیتی باڑی سے متعلق ہر قدم پر آپ کی رہنمائی کے لیے حاضر ہوں۔
+میرے ذریعے آپ زرعی مشینری آسانی سے کرائے پر حاصل بھی کر سکتے ہیں اور اپنی مشینری کرائے پر دے بھی سکتے ہیں۔ اگر آپ سُپر سیڈر کرائے پر لیتے ہیں تو حکومتِ پنجاب کی جانب سے 25 ہزار روپے تک سبسڈی بھی حاصل کر سکتے ہیں۔
+آپ حکومتِ پنجاب کی نئی زرعی اسکیموں کی بروقت معلومات حاصل کر سکتے ہیں، سب سے پہلے رجسٹریشن کروا سکتے ہیں، اور اپنی درخواست کی موجودہ صورتحال بھی معلوم کر سکتے ہیں۔
+میں مصنوعی ذہانت، یعنی اے آئی، کی مدد سے آپ کی فصل، زمین اور زرعی مسائل کے مطابق آسان اور مؤثر مشورے فراہم کرتا ہوں، تاکہ آپ بہتر فیصلے کریں، پیداوار بڑھائیں اور زیادہ منافع حاصل کریں۔
+کسان مددگار — ہر کسان کا قابلِ اعتماد ساتھی، جدید زراعت کی طرف ایک مضبوط قدم۔</string>
+    <string name="kissan_madadgar_popup_text">میں آپ کی مدد کرنے کے لیے ہر وقت تیار ہوں!</string>
+    <string name="machine_registeration_step_1">مشین رجسٹریشن کے لیے زرعی مشین پر ٹیپ کریں: ۱ پر %1$s، ۲ پر %2$s، ۳ پر %3$s، یا ۴ پر دیگر۔</string>
+    <string name="machine_registeration_step_2_count">آپ کے پاس کتنی %1$s ہیں؟ براہ کرم ان کی تعداد منتخب کریں: ایک، دو، تین، یا اس سے زیادہ۔</string>
+    <string name="machine_registeration_step_2_district">جس ضلع یا علاقے میں آپ اپنی خدمات فراہم کرنا چاہتے ہیں، وہ ضلع منتخب کریں۔</string>
+    <string name="machine_registeration_step_3_name">زرعی مشین کی رجسٹریشن کے لیے اپنا پورا نام یہاں لکھیں۔</string>
+    <string name="machine_registeration_step_3_cnic">مشین رجسٹریشن کے لیے اپنا شناختی کارڈ نمبر درج کریں، تاکہ آپ حکومت کی سبسڈی اسکیموں میں شامل ہو سکیں۔</string>
+    <string name="machine_registeration_step_3_mobile">مشین رجسٹریشن کے لیے اپنا موبائل نمبر درج کریں، تاکہ محکمہ زراعت کا نمائندہ آپ سے رابطہ کر سکے۔</string>
+    <string name="machine_registeration_step_3_otp">آپ کے موبائل نمبر پر بھیجا گیا تصدیقی کوڈ یہاں درج کریں اور رجسٹریشن مکمل کرنے کے لیے درخواست جمع کروائیں۔</string>
+    <string name="machine_registeration_info">اپنی زرعی مشینری کو کسان مددگار پر رجسٹر کروانے کے لیے یہاں کلک کریں۔ رجسٹریشن کے بعد آپ اپنی مشین کرائے پر دے سکیں گے اور حکومتی اسکیموں کے تحت سبسڈی بھی حاصل کر سکیں گے۔</string>
+    <string name="machine_booking_info">اپنے قریبی علاقے سے سبسڈی والی زرعی مشینیں کرائے پر حاصل کرنے کے لیے کسی بھی مشین پر کلک کریں اور بکنگ کروائیں۔</string>
+    <string name="search_tab_help_narration">مشینری تلاش کرنے کے لیے اوپر دیے گئے خانے میں کاشتکار یا سروس فراہم کنندہ کا نام یا موبائل نمبر لکھیں، مطلوبہ مشینری خود بخود سامنے آ جائے گی۔ آپ ضلع منتخب کر کے تلاش کو مزید محدود بھی کر سکتے ہیں۔ نقشہ بٹن پر دبا کر قریبی مشینریوں کو نقشے پر ان کے محلِ وقوع کے ساتھ بھی دیکھا جا سکتا ہے۔</string>
+    <string name="map_popup_narration_format">یہ %1$s کے پاس %2$s دستیاب ہے، جس کا فاصلہ %3$s ہے۔ ربطہ نمبر %4$s ہے اور اس کی درجہ بندی %5$s ستارے ہے۔ بکنگ کے لیے بک کریں کا بٹن دبائیں۔</string>
+    <string name="machinery_detail_narration_format">یہ %1$s کی %2$s ہے، جس کا فاصلہ %3$s ہے۔ ربطہ نمبر %4$s ہے اور اس کی درجہ بندی %5$s ستارے ہے۔ اس مشین پر پنجاب کلین ائیر پروگرام کے تحت 5000 روپے فی ایکڑ سبسڈی دستیاب ہے۔ بکنگ کے لیے نیچے دیے گئے بٹن پر دبائیں۔</string>
+    <string name="my_machinery_list_title">میری مشینری کی فہرست</string>
+    <string name="my_machinery_list_subtitle">آپ کی رجسٹرڈ زرعی مشینیں اور ان کے اہم اعداد و شمار</string>
+    <string name="tab_machineries">مشینیں</string>
+    <string name="msg_profile_saved">پروفائل کامیابی سے محفوظ ہو گئی ہے!</string>
+    <string name="err_profile_save_failed">پروفائل محفوظ کرنے میں ناکامی ہوئی۔ دوبارہ کوشش کریں۔</string>
+    <string name="welcome_user_format">خوش آمدید، %1$s</string>
+    <string name="register_machine_banner_title">اپنی زرعی مشین رجسٹر کروائیں</string>
+    <string name="content_description_listen_audio">آڈیو معلومات</string>
+    <string name="content_description_mascot">کسان مددگار مسکوٹ</string>
+    <string name="active_available_machines">دستیاب اور فعال مشینیں</string>
+    <string name="schemes_card_title">محکمہ زراعت کی اسکیمیں</string>
+    <string name="schemes_card_subtitle">حکومتی سبسڈی، گرین ٹریکٹر اور دیگر فعال پروگرام</string>
+    <string name="no_machinery_found_title">کوئی مشینری نہیں ملی</string>
+    <string name="no_machinery_found_desc">آپ کے منتخب کردہ معیار کے مطابق کوئی مشینری دستیاب نہیں ہے۔</string>
+    <string name="register_dialog_title">زرعی مشین رجسٹر کریں؟</string>
+    <string name="btn_change_role">کردار تبدیل کریں</string>
+    <string name="btn_back_dialog">واپس</string>
+    <string name="register_dialog_desc_1">اپنی زرعی مشینری (جیسے سُپر سیڈر، ٹریکٹر) کسان مددگار ایپ پر کرائے کے لیے فراہم کر کے اپنی آمدنی بڑھائیں۔</string>
+    <string name="register_dialog_desc_2">مشینری رجسٹر کرنے کے لیے، آپ کو اپنا کردار تبدیل کر کے \'سروس فراہم کنندہ\' (Service Provider) کے طور پر لاگ ان کرنا ہوگا۔</string>
+    <string name="btn_ok">ٹھیک ہے</string>
+    <string name="content_description_listen_audio_alt">آڈیو کسان مددگار</string>
+    <string name="btn_close_tooltip">بند کریں</string>
+    <string name="provider_stat_active_machines">فعال مشینیں</string>
+    <string name="provider_stat_pending_machines">زیر التواء مشینیں</string>
+    <string name="provider_stat_total_acres">کل رقبہ (ایکڑ)</string>
+    <string name="provider_stat_average_rating">اوسط درجہ بندی</string>
+    <string name="provider_empty_machinery_title">کوئی مشینری دستیاب نہیں</string>
+    <string name="provider_empty_machinery_desc">نئی مشینری شامل کرنے کے لیے نیچے دیے گئے بٹن پر کلک کریں۔</string>
+    <string name="label_acres_done">مکمل ایکڑ</string>
+    <string name="acres_suffix_val">%1$s ایکڑ</string>
+    <string name="label_rating">درجہ بندی</string>
+    <string name="label_district">ضلع</string>
+    <string name="label_scheme">سکیم</string>
+    <string name="label_no_scheme">بغیر سکیم</string>
+    <string name="bookings_header_title">آپ کی بکنگز</string>
+    <string name="bookings_header_subtitle">اپنی مشینری بکنگز کی موجودہ حالت اور تفصیلات دیکھیں</string>
+    <string name="bookings_search_narration">یہ بکنگ کی سکرین ہے۔ یہاں آپ جدید، جاری اور مکمل بکنگ دیکھ سکتے ہیں۔ کاشتکاری شروع کرنے کے لیے \'جاری\' والے ٹیب پر جائیں۔ اس کے علاوہ، آپ یہاں بکنگ نمبر یا اپنا موبائل نمبر لکھ کر اپنی کوئی بھی بکنگ تلاش کر سکتے ہیں۔</string>
+    <string name="bookings_search_placeholder">بکنگ / موبائل نمبر تلاش کریں</string>
+    <string name="bookings_search_no_results">آپ کی تلاش سے کوئی بکنگ نہیں ملی۔</string>
+    <string name="no_bookings_desc">نئی بکنگز اور درخواستیں یہاں نظر آئیں گی۔</string>
+    <string name="guest_machineries_title">اپنی مشینیں دیکھنے کے لیے\nلاگ ان کریں</string>
+    <string name="guest_machineries_desc">اپنی مشینوں کا ریکارڈ رکھنے اور دوسرے کسانوں کو کرائے پر دینے کے لیے لاگ ان کرنا ضروری ہے۔</string>
+    <string name="auth_req_cnic_error">درست شناختی کارڈ نمبر درج کریں</string>
+    <string name="msg_phone_copied">فون نمبر کاپی ہو گیا</string>
+    <string name="label_subsidy">سبسڈی</string>
+    <string name="pcap_fallback">پنجاب کلین ائیر پروگرام (PCAP)</string>
+    <string name="label_subsidy_scheme">سبسڈی سکیم</string>
+    <string name="subsidy_fallback">5,000 Rs. فی ایکڑ</string>
+    <string name="btn_book">بک کریں</string>
+    <string name="error_past_date">بکنگ کی تاریخ ماضی میں نہیں ہو سکتی</string>
+    <string name="voice_status_listening">میں سن رہا ہوں...</string>
+    <string name="toast_mic_permission">مائیک کی اجازت لازمی ہے</string>
+    <string name="voice_status_recording_failed">آڈیو ریکارڈنگ شروع نہیں ہو سکی</string>
+    <string name="voice_status_done">✅ مکمل!</string>
+    <string name="voice_status_speak_date">🎙️ تاریخ بولیں...</string>
+    <string name="voice_status_speak_hours">🎙️ گھنٹے بولیں...</string>
+    <string name="voice_status_speak_acres">🎙️ رقبہ ایکڑ میں بولیں...</string>
+    <string name="voice_status_service_available">سروس دستیاب</string>
+    <string name="voice_status_speak_try">کوشش کریں بولیں...</string>
+    <string name="voice_status_ready">میں تیار ہوں</string>
+    <string name="voice_error_no_match">سمجھ نہیں آیا</string>
+    <string name="voice_error_timeout">وقت ختم ہو گیا</string>
+    <string name="voice_error_audio">آڈیو ریکارڈنگ کا مسئلہ</string>
+    <string name="voice_error_network">انٹرنیٹ کنکشن کا مسئلہ</string>
+    <string name="voice_error_prefix">خرابی %1$s - دوبارہ بولیں</string>
+    <string name="voice_status_past_date_error">⚠️ ماضی کی تاریخ قبول نہیں ہے</string>
+    <string name="narrate_past_date_error">بکنگ کی تاریخ ماضی میں نہیں ہو سکتی۔ براہ کرم آج کی یا مستقبل کی تاریخ بولیں۔</string>
+    <string name="voice_status_date_selected">🔊 %1$s منتخب ہو گئی</string>
+    <string name="voice_status_date_not_understood">⚠️ تاریخ سمجھ نہیں آئی — دوبارہ بولیں</string>
+    <string name="voice_status_hours_selected">🔊 %1$s گھنٹے منتخب</string>
+    <string name="voice_status_hours_not_understood">⚠️ گھنٹے سمجھ نہیں آئے — دوبارہ بولیں</string>
+    <string name="voice_status_acres_selected">🔊 %1$s ایکڑ منتخب</string>
+    <string name="voice_status_acres_not_understood">⚠️ رقبہ سمجھ نہیں آیا — دوبارہ بولیں</string>
+    <string name="pending_status">زیر التواء</string>
+    <string name="content_description_success">کامیابی</string>
+    <string name="booking_confirm_success_msg">بکنگ کی تصدیق کامیابی سے ہو گئی ہے!</string>
+    <string name="booking_success_desc">درخواست موصول ہو گئی ہے، سروس فراہم کنندہ جلد رابطہ کرے گا۔</string>
+    <string name="summary_label_date">تاریخ</string>
+    <string name="summary_label_hours">مطلوبہ گھنٹے</string>
+    <string name="summary_label_acres">رقبہ</string>
+    <string name="summary_label_total_rent">کل کرایہ</string>
+    <string name="total_rent_approx_val">%1$.0f Rs. (اندازہ)</string>
+    <string name="booking_confirm_title">بکنگ کی تصدیق</string>
+    <string name="voice_status_machine_details">🔊 مشین کی تفصیلات...</string>
+    <string name="error_select_date">براہ کرم بکنگ کی تاریخ منتخب کریں</string>
+    <string name="select_booking_time_title">بکنگ کا وقت منتخب کریں</string>
+    <string name="booking_intro_voice">محترم %1$s! کسان مددگار بکنگ اسسٹنٹ میں خوش آمدید۔ زرعی مشین کی بکنگ کے لیے، براہ کرم مطلوبہ تاریخ بولیں۔ مثال کے طور پر: بیس جون، یا بائیس جولائی۔</string>
+    <string name="content_description_mic">مائیک</string>
+    <string name="label_required_hours">مطلوبہ گھنٹے</string>
+    <string name="acres_contact_details_title">ایکڑ اور رابطے کی تفصیلات</string>
+    <string name="error_acres_required">براہ کرم رقبہ درج کریں</string>
+    <string name="error_acres_invalid">براہ کرم 0.1 سے 100 کے درمیان درست ایکڑ درج کریں</string>
+    <string name="label_acres_required">ایکڑ (لازمی)</string>
+    <string name="helper_acres_range">کم از کم 0.1 اور زیادہ سے زیادہ 100 ایکڑ۔</string>
+    <string name="error_name_required">براہ کرم اپنا نام درج کریں</string>
+    <string name="error_name_invalid">براہ کرم اپنا اصل نام درج کریں (معزز کسان کے علاوہ)</string>
+    <string name="label_name">نام</string>
+    <string name="placeholder_enter_name">اپنا پورا نام درج کریں</string>
+    <string name="label_mobile">موبائل نمبر</string>
+    <string name="btn_finalize_booking">بکنگ فائنل کریں</string>
+    <string name="booking_time_intro_format">چلو %1$s بھائی، اب بکنگ کا وقت منتخب کرتے ہیں۔ آپ %2$s کی بکنگ کر رہے ہیں، جس کے مالک %3$s ہیں۔ بتائیے، بکنگ کی تاریخ کیا رکھنی ہے؟</string>
+    <string name="label_machine_info">مشین کی معلومات</string>
+    <string name="toast_phone_copied">فون نمبر کاپی ہو گیا</string>
+    <string name="label_unknown">نامعلوم</string>
+    <string name="service_shuruu_karain">سروس کا آغاز کریں</string>
+    <string name="scan_karain">کاشتکار کی اسکرین سے QR کوڈ اسکین کریں۔</string>
 </resources>

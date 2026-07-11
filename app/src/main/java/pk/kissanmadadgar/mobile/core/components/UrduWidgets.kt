@@ -1,10 +1,18 @@
 package pk.kissanmadadgar.mobile.core.components
 
 import androidx.compose.animation.*
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Info
@@ -18,6 +26,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.font.FontWeight
@@ -156,8 +167,8 @@ fun UrduTextField(
                 value = value,
                 onValueChange = onValueChange,
                 modifier = Modifier.fillMaxWidth(),
-                label = { Text(text = label, fontSize = 15.sp) },
-                placeholder = { Text(text = placeholder, fontSize = 14.sp, color = Color.Gray) },
+                label = { Text(text = label, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                placeholder = { Text(text = placeholder, fontSize = 14.sp, color = Color.Gray, maxLines = 1, overflow = TextOverflow.Ellipsis) },
                 shape = RoundedCornerShape(12.dp),
                 isError = errorText != null,
                 keyboardOptions = keyboardOptions,
@@ -344,7 +355,8 @@ fun AgriAppHeader(
     title: String,
     onProfileClick: () -> Unit,
     onBellClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    unreadNotificationCount: Long = 0
 ) {
     val headerBrush = Brush.linearGradient(
         colors = listOf(
@@ -394,16 +406,72 @@ fun AgriAppHeader(
                     }
                 },
                 navigationIcon = {
+                    val hasUnread = unreadNotificationCount > 0
+                    // Runs continuously but is only applied to the icon/badge while hasUnread is
+                    // true, so there's no cost to restarting the transition when the count changes.
+                    val bellPulseTransition = rememberInfiniteTransition(label = "bell_unread_pulse")
+                    val bellRotation by bellPulseTransition.animateFloat(
+                        initialValue = -14f,
+                        targetValue = 14f,
+                        animationSpec = infiniteRepeatable(
+                            animation = tween(280, easing = FastOutSlowInEasing),
+                            repeatMode = RepeatMode.Reverse
+                        ),
+                        label = "bell_rotation"
+                    )
+                    val badgeScale by bellPulseTransition.animateFloat(
+                        initialValue = 0.92f,
+                        targetValue = 1.2f,
+                        animationSpec = infiniteRepeatable(
+                            animation = tween(650, easing = FastOutSlowInEasing),
+                            repeatMode = RepeatMode.Reverse
+                        ),
+                        label = "badge_pulse"
+                    )
+
                     IconButton(
                         onClick = onBellClick,
                         modifier = Modifier.padding(start = 8.dp).size(48.dp)
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.Notifications,
-                            contentDescription = "Notifications",
-                            tint = Color.White,
-                            modifier = Modifier.size(34.dp)
-                        )
+                        // Not using BadgedBox here: its default badge offset pokes slightly above
+                        // and outside the icon's own bounds, which lands outside the header
+                        // Surface's clip = true region (see the shadow() modifier above) and gets
+                        // sliced off — only a thin sliver of the badge was visible. Building the
+                        // badge as a child aligned inside this Box keeps it fully within positive,
+                        // in-bounds coordinates so it can never be clipped by the ancestor shape.
+                        Box(
+                            modifier = Modifier.size(40.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Notifications,
+                                contentDescription = "Notifications",
+                                tint = Color.White,
+                                modifier = Modifier
+                                    .size(28.dp)
+                                    .rotate(if (hasUnread) bellRotation else 0f)
+                            )
+                            if (hasUnread) {
+                                Box(
+                                    modifier = Modifier
+                                        .align(Alignment.TopEnd)
+                                        .size(18.dp)
+                                        .scale(badgeScale)
+                                        .clip(CircleShape)
+                                        .background(Color(0xFFD32F2F))
+                                        .border(1.dp, Color.White, CircleShape),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = if (unreadNotificationCount > 9) "9+" else unreadNotificationCount.toString(),
+                                        color = Color.White,
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        maxLines = 1
+                                    )
+                                }
+                            }
+                        }
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -412,47 +480,6 @@ fun AgriAppHeader(
                     navigationIconContentColor = Color.White,
                     actionIconContentColor = Color.White
                 )
-            )
-        }
-    }
-}
-
-@Composable
-fun AgriNotificationsDialog(
-    onDismissRequest: () -> Unit
-) {
-    AgriConfirmationDialog(
-        title = "نوٹیفیکیشنز",
-        onDismissRequest = onDismissRequest,
-        confirmButtonText = "ٹھیک ہے",
-        onConfirm = onDismissRequest,
-        dismissButtonText = "بند کریں"
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 8.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            Icon(
-                imageVector = Icons.Default.Notifications,
-                contentDescription = null,
-                tint = AgriGreenPrimary,
-                modifier = Modifier.size(48.dp)
-            )
-            Text(
-                text = "آپ کے پاس کوئی نیا نوٹیفیکیشن نہیں ہے۔",
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Bold,
-                color = Color.Black,
-                textAlign = TextAlign.Center
-            )
-            Text(
-                text = "تمام اہم معلومات اور الرٹس یہاں ظاہر ہوں گے۔",
-                fontSize = 13.sp,
-                color = Color.Gray,
-                textAlign = TextAlign.Center
             )
         }
     }

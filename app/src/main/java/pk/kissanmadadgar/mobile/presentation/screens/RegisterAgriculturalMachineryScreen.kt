@@ -2,6 +2,12 @@ package pk.kissanmadadgar.mobile.presentation.screens
 
 import android.widget.Toast
 import androidx.compose.animation.*
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.BorderStroke
@@ -54,6 +60,62 @@ fun RegisterAgriculturalMachineryScreen(
     onBack: () -> Unit
 ) {
     val context = LocalContext.current
+
+    // --- Welcome Header Audio Assistant — shared NarrationManager singleton ---
+    LaunchedEffect(Unit) {
+        pk.kissanmadadgar.mobile.data.local.NarrationManager.initialize(context)
+    }
+    val activeSpeakingAudioId by pk.kissanmadadgar.mobile.data.local.NarrationManager.activeUtteranceId.collectAsState()
+
+    val infiniteTransition = rememberInfiniteTransition(label = "pulse")
+    
+    val rippleScale1 by infiniteTransition.animateFloat(
+        initialValue = 1f,
+        targetValue = 1.6f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1500),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "ripple1"
+    )
+    val rippleAlpha1 by infiniteTransition.animateFloat(
+        initialValue = 0.6f,
+        targetValue = 0f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1500),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "rippleAlpha1"
+    )
+    
+    val rippleScale2 by infiniteTransition.animateFloat(
+        initialValue = 1f,
+        targetValue = 1.6f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1500, delayMillis = 750),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "ripple2"
+    )
+    val rippleAlpha2 by infiniteTransition.animateFloat(
+        initialValue = 0.6f,
+        targetValue = 0f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1500, delayMillis = 750),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "rippleAlpha2"
+    )
+
+    val buttonScale by infiniteTransition.animateFloat(
+        initialValue = 1f,
+        targetValue = if (activeSpeakingAudioId != null) 1.0f else 1.08f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1000),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "buttonScale"
+    )
 
     // State holding selected machines (Set of strings)
     var machineQuantities by remember { mutableStateOf(emptyMap<String, Int>()) }
@@ -246,13 +308,117 @@ fun RegisterAgriculturalMachineryScreen(
                                 }
                             } else {
                                 Column(modifier = Modifier.fillMaxWidth()) {
-                                    Text(
-                                        text = stringResource(id = R.string.step_select_machine_prompt),
-                                        fontSize = 16.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = AgriGreenPrimary,
-                                        modifier = Modifier.padding(bottom = 12.dp)
-                                    )
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
+                                        verticalAlignment = Alignment.Top,
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        Text(
+                                            text = stringResource(id = R.string.step_select_machine_prompt),
+                                            fontSize = 16.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = AgriGreenPrimary,
+                                            modifier = Modifier.weight(1f)
+                                        )
+
+                                        // Audio Assistant Button with Ripples
+                                        Box(
+                                            modifier = Modifier.size(48.dp).offset(y = (-6).dp),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            // Ripples (glowing waves when active or idle)
+                                            Box(
+                                                modifier = Modifier
+                                                    .fillMaxSize()
+                                                    .graphicsLayer(
+                                                        scaleX = rippleScale1,
+                                                        scaleY = rippleScale1,
+                                                        alpha = rippleAlpha1
+                                                    )
+                                                    .background(Color(0xFFFFB300).copy(alpha = 0.4f), CircleShape)
+                                            )
+                                            Box(
+                                                modifier = Modifier
+                                                    .fillMaxSize()
+                                                    .graphicsLayer(
+                                                        scaleX = rippleScale2,
+                                                        scaleY = rippleScale2,
+                                                        alpha = rippleAlpha2
+                                                    )
+                                                    .background(Color(0xFFFF6D00).copy(alpha = 0.4f), CircleShape)
+                                            )
+
+                                            // Main Button
+                                            Box(
+                                                modifier = Modifier
+                                                    .size(40.dp)
+                                                    .graphicsLayer(
+                                                        scaleX = buttonScale,
+                                                        scaleY = buttonScale
+                                                    )
+                                                    .shadow(elevation = 4.dp, shape = CircleShape)
+                                                    .background(
+                                                        brush = Brush.linearGradient(
+                                                            colors = if (activeSpeakingAudioId == "step_1") {
+                                                                listOf(Color(0xFFE65100), Color(0xFFFF3D00))
+                                                            } else {
+                                                                listOf(Color(0xFFFFD54F), Color(0xFFFF8F00))
+                                                            }
+                                                        ),
+                                                        shape = CircleShape
+                                                    )
+                                                    .clip(CircleShape)
+                                                    .clickable {
+                                                        if (activeSpeakingAudioId == "step_1") {
+                                                            pk.kissanmadadgar.mobile.data.local.NarrationManager.stop()
+                                                        } else {
+                                                            val name1 = first3Implements.getOrNull(0)?.nameUr ?: context.getString(R.string.machine_super_seeder)
+                                                            val name2 = first3Implements.getOrNull(1)?.nameUr ?: context.getString(R.string.machine_baler)
+                                                            val name3 = first3Implements.getOrNull(2)?.nameUr ?: context.getString(R.string.machine_harvester)
+                                                            
+                                                            val rawText = context.getString(R.string.machine_registeration_step_1)
+                                                            val textToSpeak = String.format(rawText, name1, name2, name3)
+                                                            
+                                                            pk.kissanmadadgar.mobile.data.local.NarrationManager.speak(textToSpeak, "step_1")
+                                                        }
+                                                    },
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                if (activeSpeakingAudioId == "step_1") {
+                                                    // Active sound wave equalizer animation
+                                                    Row(
+                                                        horizontalArrangement = Arrangement.spacedBy(1.5.dp),
+                                                        verticalAlignment = Alignment.CenterVertically
+                                                    ) {
+                                                        for (i in 0 until 3) {
+                                                            val barHeightScale by infiniteTransition.animateFloat(
+                                                                initialValue = 0.2f,
+                                                                targetValue = 1.0f,
+                                                                animationSpec = infiniteRepeatable(
+                                                                    animation = tween(400 + i * 150),
+                                                                    repeatMode = RepeatMode.Reverse
+                                                                ),
+                                                                label = "bar_$i"
+                                                            )
+                                                            Box(
+                                                                modifier = Modifier
+                                                                    .size(width = 2.dp, height = 14.dp)
+                                                                    .graphicsLayer(scaleY = barHeightScale)
+                                                                    .background(Color.White, RoundedCornerShape(1.dp))
+                                                            )
+                                                        }
+                                                    }
+                                                } else {
+                                                    Icon(
+                                                        imageVector = Icons.Default.SupportAgent,
+                                                        contentDescription = "آڈیو گائیڈ",
+                                                        tint = Color.White,
+                                                        modifier = Modifier.size(22.dp)
+                                                    )
+                                                }
+                                            }
+                                        }
+                                    }
 
                                     // 2x2 Grid for standard machines (using images)
                                     val othersStr = stringResource(id = R.string.machine_others)
@@ -554,13 +720,95 @@ fun RegisterAgriculturalMachineryScreen(
                     
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    Text(
-                        text = stringResource(id = R.string.prompt_how_many_machines),
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.padding(horizontal = 8.dp)
-                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            text = stringResource(id = R.string.prompt_how_many_machines),
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            textAlign = TextAlign.Right,
+                            modifier = Modifier.weight(1f)
+                        )
+                        
+                        Spacer(modifier = Modifier.width(8.dp))
+
+                        // Audio Assistant Button for Count
+                        Box(
+                            modifier = Modifier.size(44.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            if (activeSpeakingAudioId == "count") {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .graphicsLayer(scaleX = rippleScale1, scaleY = rippleScale1, alpha = rippleAlpha1)
+                                        .background(Color(0xFFFFB300).copy(alpha = 0.4f), CircleShape)
+                                )
+                            }
+                            Box(
+                                modifier = Modifier
+                                    .size(36.dp)
+                                    .shadow(elevation = 2.dp, shape = CircleShape)
+                                    .background(
+                                        brush = Brush.linearGradient(
+                                            colors = if (activeSpeakingAudioId == "count") {
+                                                listOf(Color(0xFFE65100), Color(0xFFFF3D00))
+                                            } else {
+                                                listOf(Color(0xFFFFD54F), Color(0xFFFF8F00))
+                                            }
+                                        ),
+                                        shape = CircleShape
+                                    )
+                                    .clip(CircleShape)
+                                    .clickable {
+                                        if (activeSpeakingAudioId == "count") {
+                                            pk.kissanmadadgar.mobile.data.local.NarrationManager.stop()
+                                        } else {
+                                            val machineName = if (data.name == "دیگر مشینیں" && customMachineName.isNotEmpty()) customMachineName else data.name
+                                            val rawText = context.getString(R.string.machine_registeration_step_2_count)
+                                            val textToSpeak = String.format(rawText, machineName)
+                                            pk.kissanmadadgar.mobile.data.local.NarrationManager.speak(textToSpeak, "count")
+                                        }
+                                    },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                if (activeSpeakingAudioId == "count") {
+                                    Row(
+                                        horizontalArrangement = Arrangement.spacedBy(1.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        for (i in 0 until 3) {
+                                            val barHeightScale by infiniteTransition.animateFloat(
+                                                initialValue = 0.2f,
+                                                targetValue = 1.0f,
+                                                animationSpec = infiniteRepeatable(
+                                                    animation = tween(400 + i * 150),
+                                                    repeatMode = RepeatMode.Reverse
+                                                ),
+                                                label = "bar_count_$i"
+                                            )
+                                            Box(
+                                                modifier = Modifier
+                                                    .size(width = 1.5.dp, height = 12.dp)
+                                                    .graphicsLayer(scaleY = barHeightScale)
+                                                    .background(Color.White, RoundedCornerShape(0.5.dp))
+                                            )
+                                        }
+                                    }
+                                } else {
+                                    Icon(
+                                        imageVector = Icons.Default.SupportAgent,
+                                        contentDescription = "آڈیو گائیڈ",
+                                        tint = Color.White,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
                     Spacer(modifier = Modifier.height(12.dp))
                     
                     Row(
@@ -596,13 +844,93 @@ fun RegisterAgriculturalMachineryScreen(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalAlignment = Alignment.Start
                     ) {
-                        Text(
-                            text = "ضلع منتخب کریں",
-                            fontSize = 15.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = AgriGreenPrimary,
-                            modifier = Modifier.padding(bottom = 8.dp)
-                        )
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(start = 8.dp, end = 8.dp, bottom = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                text = "ضلع منتخب کریں",
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = AgriGreenPrimary,
+                                modifier = Modifier.weight(1f)
+                            )
+
+                            Spacer(modifier = Modifier.width(8.dp))
+
+                            // Audio Assistant Button for District
+                            Box(
+                                modifier = Modifier.size(44.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                if (activeSpeakingAudioId == "district") {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .graphicsLayer(scaleX = rippleScale1, scaleY = rippleScale1, alpha = rippleAlpha1)
+                                            .background(Color(0xFFFFB300).copy(alpha = 0.4f), CircleShape)
+                                    )
+                                }
+                                Box(
+                                    modifier = Modifier
+                                        .size(36.dp)
+                                        .shadow(elevation = 2.dp, shape = CircleShape)
+                                        .background(
+                                            brush = Brush.linearGradient(
+                                                colors = if (activeSpeakingAudioId == "district") {
+                                                    listOf(Color(0xFFE65100), Color(0xFFFF3D00))
+                                                } else {
+                                                    listOf(Color(0xFFFFD54F), Color(0xFFFF8F00))
+                                                }
+                                            ),
+                                            shape = CircleShape
+                                        )
+                                        .clip(CircleShape)
+                                        .clickable {
+                                            if (activeSpeakingAudioId == "district") {
+                                                pk.kissanmadadgar.mobile.data.local.NarrationManager.stop()
+                                            } else {
+                                                val textToSpeak = context.getString(R.string.machine_registeration_step_2_district)
+                                                pk.kissanmadadgar.mobile.data.local.NarrationManager.speak(textToSpeak, "district")
+                                            }
+                                        },
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    if (activeSpeakingAudioId == "district") {
+                                        Row(
+                                            horizontalArrangement = Arrangement.spacedBy(1.5.dp),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            for (i in 0 until 3) {
+                                                val barHeightScale by infiniteTransition.animateFloat(
+                                                    initialValue = 0.2f,
+                                                    targetValue = 1.0f,
+                                                    animationSpec = infiniteRepeatable(
+                                                        animation = tween(400 + i * 150),
+                                                        repeatMode = RepeatMode.Reverse
+                                                    ),
+                                                    label = "bar_dist_$i"
+                                                )
+                                                Box(
+                                                    modifier = Modifier
+                                                        .size(width = 1.5.dp, height = 12.dp)
+                                                        .graphicsLayer(scaleY = barHeightScale)
+                                                        .background(Color.White, RoundedCornerShape(0.5.dp))
+                                                )
+                                            }
+                                        }
+                                    } else {
+                                        Icon(
+                                            imageVector = Icons.Default.SupportAgent,
+                                            contentDescription = "آڈیو گائیڈ",
+                                            tint = Color.White,
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                    }
+                                }
+                            }
+                        }
                         
                         var dropdownExpanded by remember { mutableStateOf(false) }
                         
@@ -661,13 +989,91 @@ fun RegisterAgriculturalMachineryScreen(
                             onEditClick = { currentStep = 1 }
                         ) {
                             Column(modifier = Modifier.fillMaxWidth()) {
-                                Text(
-                                    text = stringResource(id = R.string.register_name),
-                                    fontSize = 16.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = AgriGreenPrimary,
-                                    modifier = Modifier.padding(bottom = 12.dp)
-                                )
+                                Row(
+                                    modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
+                                    verticalAlignment = Alignment.Top,
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Text(
+                                        text = stringResource(id = R.string.register_name),
+                                        fontSize = 16.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = AgriGreenPrimary,
+                                        modifier = Modifier.weight(1f)
+                                    )
+
+                                    // Audio Assistant Button for Name
+                                    Box(
+                                        modifier = Modifier.size(48.dp).offset(y = (-6).dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        if (activeSpeakingAudioId == "step_3_name") {
+                                            Box(
+                                                modifier = Modifier
+                                                    .fillMaxSize()
+                                                    .graphicsLayer(scaleX = rippleScale1, scaleY = rippleScale1, alpha = rippleAlpha1)
+                                                    .background(Color(0xFFFFB300).copy(alpha = 0.4f), CircleShape)
+                                            )
+                                        }
+                                        Box(
+                                            modifier = Modifier
+                                                .size(40.dp)
+                                                .shadow(elevation = 4.dp, shape = CircleShape)
+                                                .background(
+                                                    brush = Brush.linearGradient(
+                                                        colors = if (activeSpeakingAudioId == "step_3_name") {
+                                                            listOf(Color(0xFFE65100), Color(0xFFFF3D00))
+                                                        } else {
+                                                            listOf(Color(0xFFFFD54F), Color(0xFFFF8F00))
+                                                        }
+                                                    ),
+                                                    shape = CircleShape
+                                                )
+                                                .clip(CircleShape)
+                                                .clickable {
+                                                    if (activeSpeakingAudioId == "step_3_name") {
+                                                        pk.kissanmadadgar.mobile.data.local.NarrationManager.stop()
+                                                    } else {
+                                                        val textToSpeak = context.getString(R.string.machine_registeration_step_3_name)
+                                                        pk.kissanmadadgar.mobile.data.local.NarrationManager.speak(textToSpeak, "step_3_name")
+                                                    }
+                                                },
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            if (activeSpeakingAudioId == "step_3_name") {
+                                                Row(
+                                                    horizontalArrangement = Arrangement.spacedBy(1.5.dp),
+                                                    verticalAlignment = Alignment.CenterVertically
+                                                ) {
+                                                    for (i in 0 until 3) {
+                                                        val barHeightScale by infiniteTransition.animateFloat(
+                                                            initialValue = 0.2f,
+                                                            targetValue = 1.0f,
+                                                            animationSpec = infiniteRepeatable(
+                                                                animation = tween(400 + i * 150),
+                                                                repeatMode = RepeatMode.Reverse
+                                                            ),
+                                                            label = "bar_name_$i"
+                                                        )
+                                                        Box(
+                                                            modifier = Modifier
+                                                                .size(width = 2.dp, height = 14.dp)
+                                                                .graphicsLayer(scaleY = barHeightScale)
+                                                                .background(Color.White, RoundedCornerShape(1.dp))
+                                                        )
+                                                    }
+                                                }
+                                            } else {
+                                                Icon(
+                                                    imageVector = Icons.Default.SupportAgent,
+                                                    contentDescription = "آڈیو گائیڈ",
+                                                    tint = Color.White,
+                                                    modifier = Modifier.size(22.dp)
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
 
                                 UrduTextField(
                                     value = fullName,
@@ -683,13 +1089,91 @@ fun RegisterAgriculturalMachineryScreen(
 
                                 Spacer(modifier = Modifier.height(16.dp))
 
-                                Text(
-                                    text = "شناختی کارڈ نمبر",
-                                    fontSize = 16.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = AgriGreenPrimary,
-                                    modifier = Modifier.padding(bottom = 12.dp)
-                                )
+                                Row(
+                                    modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
+                                    verticalAlignment = Alignment.Top,
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Text(
+                                        text = "شناختی کارڈ نمبر",
+                                        fontSize = 16.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = AgriGreenPrimary,
+                                        modifier = Modifier.weight(1f)
+                                    )
+
+                                    // Audio Assistant Button for CNIC
+                                    Box(
+                                        modifier = Modifier.size(48.dp).offset(y = (-6).dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        if (activeSpeakingAudioId == "step_3_cnic") {
+                                            Box(
+                                                modifier = Modifier
+                                                    .fillMaxSize()
+                                                    .graphicsLayer(scaleX = rippleScale1, scaleY = rippleScale1, alpha = rippleAlpha1)
+                                                    .background(Color(0xFFFFB300).copy(alpha = 0.4f), CircleShape)
+                                            )
+                                        }
+                                        Box(
+                                            modifier = Modifier
+                                                .size(40.dp)
+                                                .shadow(elevation = 4.dp, shape = CircleShape)
+                                                .background(
+                                                    brush = Brush.linearGradient(
+                                                        colors = if (activeSpeakingAudioId == "step_3_cnic") {
+                                                            listOf(Color(0xFFE65100), Color(0xFFFF3D00))
+                                                        } else {
+                                                            listOf(Color(0xFFFFD54F), Color(0xFFFF8F00))
+                                                        }
+                                                    ),
+                                                    shape = CircleShape
+                                                )
+                                                .clip(CircleShape)
+                                                .clickable {
+                                                    if (activeSpeakingAudioId == "step_3_cnic") {
+                                                        pk.kissanmadadgar.mobile.data.local.NarrationManager.stop()
+                                                    } else {
+                                                        val textToSpeak = context.getString(R.string.machine_registeration_step_3_cnic)
+                                                        pk.kissanmadadgar.mobile.data.local.NarrationManager.speak(textToSpeak, "step_3_cnic")
+                                                    }
+                                                },
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            if (activeSpeakingAudioId == "step_3_cnic") {
+                                                Row(
+                                                    horizontalArrangement = Arrangement.spacedBy(1.5.dp),
+                                                    verticalAlignment = Alignment.CenterVertically
+                                                ) {
+                                                    for (i in 0 until 3) {
+                                                        val barHeightScale by infiniteTransition.animateFloat(
+                                                            initialValue = 0.2f,
+                                                            targetValue = 1.0f,
+                                                            animationSpec = infiniteRepeatable(
+                                                                animation = tween(400 + i * 150),
+                                                                repeatMode = RepeatMode.Reverse
+                                                            ),
+                                                            label = "bar_cnic_$i"
+                                                        )
+                                                        Box(
+                                                            modifier = Modifier
+                                                                .size(width = 2.dp, height = 14.dp)
+                                                                .graphicsLayer(scaleY = barHeightScale)
+                                                                .background(Color.White, RoundedCornerShape(1.dp))
+                                                        )
+                                                    }
+                                                }
+                                            } else {
+                                                Icon(
+                                                    imageVector = Icons.Default.SupportAgent,
+                                                    contentDescription = "آڈیو گائیڈ",
+                                                    tint = Color.White,
+                                                    modifier = Modifier.size(22.dp)
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
 
                                 CNICInputField(
                                     cnic = cnic,
@@ -712,13 +1196,91 @@ fun RegisterAgriculturalMachineryScreen(
                                 
                                 Spacer(modifier = Modifier.height(16.dp))
 
-                                Text(
-                                    text = stringResource(id = R.string.step_phone_prompt),
-                                    fontSize = 16.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = AgriGreenPrimary,
-                                    modifier = Modifier.padding(bottom = 12.dp)
-                                )
+                                Row(
+                                    modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
+                                    verticalAlignment = Alignment.Top,
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Text(
+                                        text = stringResource(id = R.string.step_phone_prompt),
+                                        fontSize = 16.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = AgriGreenPrimary,
+                                        modifier = Modifier.weight(1f)
+                                    )
+
+                                    // Audio Assistant Button for Mobile
+                                    Box(
+                                        modifier = Modifier.size(48.dp).offset(y = (-6).dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        if (activeSpeakingAudioId == "step_3_mobile") {
+                                            Box(
+                                                modifier = Modifier
+                                                    .fillMaxSize()
+                                                    .graphicsLayer(scaleX = rippleScale1, scaleY = rippleScale1, alpha = rippleAlpha1)
+                                                    .background(Color(0xFFFFB300).copy(alpha = 0.4f), CircleShape)
+                                            )
+                                        }
+                                        Box(
+                                            modifier = Modifier
+                                                .size(40.dp)
+                                                .shadow(elevation = 4.dp, shape = CircleShape)
+                                                .background(
+                                                    brush = Brush.linearGradient(
+                                                        colors = if (activeSpeakingAudioId == "step_3_mobile") {
+                                                            listOf(Color(0xFFE65100), Color(0xFFFF3D00))
+                                                        } else {
+                                                            listOf(Color(0xFFFFD54F), Color(0xFFFF8F00))
+                                                        }
+                                                    ),
+                                                    shape = CircleShape
+                                                )
+                                                .clip(CircleShape)
+                                                .clickable {
+                                                    if (activeSpeakingAudioId == "step_3_mobile") {
+                                                        pk.kissanmadadgar.mobile.data.local.NarrationManager.stop()
+                                                    } else {
+                                                        val textToSpeak = context.getString(R.string.machine_registeration_step_3_mobile)
+                                                        pk.kissanmadadgar.mobile.data.local.NarrationManager.speak(textToSpeak, "step_3_mobile")
+                                                    }
+                                                },
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            if (activeSpeakingAudioId == "step_3_mobile") {
+                                                Row(
+                                                    horizontalArrangement = Arrangement.spacedBy(1.5.dp),
+                                                    verticalAlignment = Alignment.CenterVertically
+                                                ) {
+                                                    for (i in 0 until 3) {
+                                                        val barHeightScale by infiniteTransition.animateFloat(
+                                                            initialValue = 0.2f,
+                                                            targetValue = 1.0f,
+                                                            animationSpec = infiniteRepeatable(
+                                                                animation = tween(400 + i * 150),
+                                                                repeatMode = RepeatMode.Reverse
+                                                            ),
+                                                            label = "bar_mobile_$i"
+                                                        )
+                                                        Box(
+                                                            modifier = Modifier
+                                                                .size(width = 2.dp, height = 14.dp)
+                                                                .graphicsLayer(scaleY = barHeightScale)
+                                                                .background(Color.White, RoundedCornerShape(1.dp))
+                                                        )
+                                                    }
+                                                }
+                                            } else {
+                                                Icon(
+                                                    imageVector = Icons.Default.SupportAgent,
+                                                    contentDescription = "آڈیو گائیڈ",
+                                                    tint = Color.White,
+                                                    modifier = Modifier.size(22.dp)
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
 
                                  PhoneNumberInput(
                                      phone = phoneNumber,
@@ -841,13 +1403,91 @@ fun RegisterAgriculturalMachineryScreen(
                             onEditClick = {}
                         ) {
                             Column(modifier = Modifier.fillMaxWidth()) {
-                                Text(
-                                    text = stringResource(id = R.string.step_otp_prompt),
-                                    fontSize = 16.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = AgriGreenPrimary,
-                                    modifier = Modifier.padding(bottom = 6.dp)
-                                )
+                                Row(
+                                    modifier = Modifier.fillMaxWidth().padding(bottom = 6.dp),
+                                    verticalAlignment = Alignment.Top,
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Text(
+                                        text = stringResource(id = R.string.step_otp_prompt),
+                                        fontSize = 16.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = AgriGreenPrimary,
+                                        modifier = Modifier.weight(1f)
+                                    )
+
+                                    // Audio Assistant Button for OTP
+                                    Box(
+                                        modifier = Modifier.size(48.dp).offset(y = (-6).dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        if (activeSpeakingAudioId == "step_3_otp") {
+                                            Box(
+                                                modifier = Modifier
+                                                    .fillMaxSize()
+                                                    .graphicsLayer(scaleX = rippleScale1, scaleY = rippleScale1, alpha = rippleAlpha1)
+                                                    .background(Color(0xFFFFB300).copy(alpha = 0.4f), CircleShape)
+                                            )
+                                        }
+                                        Box(
+                                            modifier = Modifier
+                                                .size(40.dp)
+                                                .shadow(elevation = 4.dp, shape = CircleShape)
+                                                .background(
+                                                    brush = Brush.linearGradient(
+                                                        colors = if (activeSpeakingAudioId == "step_3_otp") {
+                                                            listOf(Color(0xFFE65100), Color(0xFFFF3D00))
+                                                        } else {
+                                                            listOf(Color(0xFFFFD54F), Color(0xFFFF8F00))
+                                                        }
+                                                    ),
+                                                    shape = CircleShape
+                                                )
+                                                .clip(CircleShape)
+                                                .clickable {
+                                                    if (activeSpeakingAudioId == "step_3_otp") {
+                                                        pk.kissanmadadgar.mobile.data.local.NarrationManager.stop()
+                                                    } else {
+                                                        val textToSpeak = context.getString(R.string.machine_registeration_step_3_otp)
+                                                        pk.kissanmadadgar.mobile.data.local.NarrationManager.speak(textToSpeak, "step_3_otp")
+                                                    }
+                                                },
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            if (activeSpeakingAudioId == "step_3_otp") {
+                                                Row(
+                                                    horizontalArrangement = Arrangement.spacedBy(1.5.dp),
+                                                    verticalAlignment = Alignment.CenterVertically
+                                                ) {
+                                                    for (i in 0 until 3) {
+                                                        val barHeightScale by infiniteTransition.animateFloat(
+                                                            initialValue = 0.2f,
+                                                            targetValue = 1.0f,
+                                                            animationSpec = infiniteRepeatable(
+                                                                animation = tween(400 + i * 150),
+                                                                repeatMode = RepeatMode.Reverse
+                                                            ),
+                                                            label = "bar_otp_$i"
+                                                        )
+                                                        Box(
+                                                            modifier = Modifier
+                                                                .size(width = 2.dp, height = 14.dp)
+                                                                .graphicsLayer(scaleY = barHeightScale)
+                                                                .background(Color.White, RoundedCornerShape(1.dp))
+                                                        )
+                                                    }
+                                                }
+                                            } else {
+                                                Icon(
+                                                    imageVector = Icons.Default.SupportAgent,
+                                                    contentDescription = "آڈیو گائیڈ",
+                                                    tint = Color.White,
+                                                    modifier = Modifier.size(22.dp)
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
                                 Text(
                                     text = stringResource(id = R.string.demo_otp_hint),
                                     fontSize = 12.sp,

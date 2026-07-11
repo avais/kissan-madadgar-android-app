@@ -5,6 +5,7 @@ import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
+import pk.kissanmadadgar.mobile.domain.model.BookingLifecyclePhoto
 
 @Entity(
     tableName = "users",
@@ -102,34 +103,50 @@ data class MachineryEntity(
     @ColumnInfo(name = "created_at") val createdAt: Long
 )
 
+/**
+ * Full-parity, per-user-scoped local cache of [pk.kissanmadadgar.mobile.domain.model.Booking].
+ * Rows arrive straight from the server DTO (see BookingRepositoryImpl), not from locally-created
+ * farmer/machinery rows, so — unlike the old version of this entity — there are no foreign keys
+ * into FarmerEntity/MachineryEntity.
+ */
 @Entity(
     tableName = "bookings",
-    foreignKeys = [
-        ForeignKey(
-            entity = FarmerEntity::class,
-            parentColumns = ["user_id"],
-            childColumns = ["farmer_id"],
-            onDelete = ForeignKey.RESTRICT
-        ),
-        ForeignKey(
-            entity = MachineryEntity::class,
-            parentColumns = ["id"],
-            childColumns = ["machinery_id"],
-            onDelete = ForeignKey.RESTRICT
-        )
-    ],
     indices = [
+        Index(value = ["owner_user_id"]),
         Index(value = ["farmer_id"]),
         Index(value = ["machinery_id"])
     ]
 )
 data class BookingEntity(
     @PrimaryKey val id: String,
+    // Scopes this row to the logged-in account that fetched it, so switching accounts on a
+    // shared device never shows a previous user's cached bookings.
+    @ColumnInfo(name = "owner_user_id") val ownerUserId: String,
     @ColumnInfo(name = "farmer_id") val farmerId: String,
+    @ColumnInfo(name = "farmer_name") val farmerName: String,
+    @ColumnInfo(name = "farmer_phone") val farmerPhone: String,
     @ColumnInfo(name = "machinery_id") val machineryId: String,
-    @ColumnInfo(name = "booking_date") val bookingDate: Long,
+    @ColumnInfo(name = "machinery_name") val machineryName: String,
+    @ColumnInfo(name = "booking_date") val bookingDate: String,
     @ColumnInfo(name = "duration_hours") val durationHours: Int,
     @ColumnInfo(name = "total_price") val totalPrice: Double,
-    val status: String = "PENDING", // 'PENDING', 'ACCEPTED', 'REJECTED', 'ACTIVE', 'COMPLETED', 'CANCELLED'
-    @ColumnInfo(name = "created_at") val createdAt: Long
+    val status: String, // BookingStatus enum name: PENDING, ACCEPTED, REJECTED, ACTIVE, COMPLETED, CANCELLED
+    @ColumnInfo(name = "created_at") val createdAt: Long,
+    @ColumnInfo(name = "location_ur") val locationUr: String,
+    val acres: Double?,
+    @ColumnInfo(name = "rejection_reason") val rejectionReason: String?,
+    @ColumnInfo(name = "lifecycle_photos") val lifecyclePhotos: List<BookingLifecyclePhoto>, // via KissanConverters
+    @ColumnInfo(name = "provider_name") val providerName: String,
+    @ColumnInfo(name = "provider_phone") val providerPhone: String,
+    @ColumnInfo(name = "machinery_image_url") val machineryImageUrl: String?,
+    @ColumnInfo(name = "is_approval_allowed") val isApprovalAllowed: Boolean,
+    // Raw server lifecycle status/label — the field the monotonic reconcile rule ranks on.
+    @ColumnInfo(name = "rental_request_status") val rentalRequestStatus: String,
+    @ColumnInfo(name = "rental_request_status_urdu") val rentalRequestStatusUrdu: String,
+    @ColumnInfo(name = "service_provider_id") val serviceProviderId: Long?,
+    @ColumnInfo(name = "service_taker_id") val serviceTakerId: Long?,
+    @ColumnInfo(name = "is_rating_done", defaultValue = "0") val isRatingDone: Boolean = false,
+    // Last time this row was written locally (fetch or optimistic update) — surfaced in the UI
+    // as "last updated" so the user knows how stale the cache might be while offline.
+    @ColumnInfo(name = "cached_at") val cachedAt: Long
 )
