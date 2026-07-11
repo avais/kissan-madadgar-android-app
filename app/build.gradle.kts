@@ -1,8 +1,20 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
     id("com.google.devtools.ksp")
     id("com.google.dagger.hilt.android")
+    id("com.google.gms.google-services")
+}
+
+// Read MAPS_API_KEY from local.properties (per-machine, not committed to source) rather than
+// hardcoding it in the manifest, so the key doesn't sit directly in a source file.
+val localProperties = Properties().apply {
+    val file = rootProject.file("local.properties")
+    if (file.exists()) {
+        file.inputStream().use { load(it) }
+    }
 }
 
 android {
@@ -20,6 +32,8 @@ android {
         vectorDrawables {
             useSupportLibrary = true
         }
+
+        manifestPlaceholders["MAPS_API_KEY"] = localProperties.getProperty("MAPS_API_KEY", "")
     }
 
     buildTypes {
@@ -82,6 +96,10 @@ dependencies {
     // Coil Image Loading
     implementation("io.coil-kt:coil-compose:2.5.0")
 
+    // Firebase Cloud Messaging (Android Push Notifications)
+    implementation(platform("com.google.firebase:firebase-bom:34.15.0"))
+    implementation("com.google.firebase:firebase-messaging")
+
     // Room Database
     val roomVersion = "2.6.1"
     implementation("androidx.room:room-runtime:$roomVersion")
@@ -94,6 +112,17 @@ dependencies {
     // MapLibre Maps & OpenStreetMap
     implementation("org.maplibre.gl:android-sdk:11.0.0")
     implementation("com.google.android.gms:play-services-location:21.1.0")
+
+    // Google Maps (Search tab's map view + clustering)
+    // Pinned to a maps-compose generation compatible with this app's compose-bom (2023.10.01) —
+    // 4.3.3 requires a newer Compose runtime and caused a NoSuchMethodError in Material3's
+    // CircularProgressIndicator (animation-core got resolved to a mismatched newer version).
+    implementation("com.google.android.gms:play-services-maps:18.2.0")
+    implementation("com.google.maps.android:maps-compose:2.11.4")
+    implementation("com.google.maps.android:maps-compose-utils:2.11.4")
+    implementation("com.google.maps.android:android-maps-utils:3.8.2")
+    implementation("com.google.mlkit:barcode-scanning:17.2.0")
+    implementation("com.google.zxing:core:3.5.3")
 
     // Testing
     testImplementation("junit:junit:4.13.2")
