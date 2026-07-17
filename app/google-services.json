@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "977779604546",
+    "project_id": "kissanmadadgharandroidapp",
+    "storage_bucket": "kissanmadadgharandroidapp.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:977779604546:android:707f20755002745cba41db",
+        "android_client_info": {
+          "package_name": "pk.kissanmadadgar.mobile"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCmmNrbX2A8wK9x-nf9s_sG85G5U9ZJ5Tc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

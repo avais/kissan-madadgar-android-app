@@ -34,11 +34,18 @@ android {
         }
 
         manifestPlaceholders["MAPS_API_KEY"] = localProperties.getProperty("MAPS_API_KEY", "")
+
+        // App only ever displays Urdu text of its own; "en" is kept too since it's the
+        // unqualified default locale most third-party libraries (Play Services, Firebase, etc.)
+        // ship their strings under. This only drops OTHER languages' copies of their strings
+        // (French, German, Hindi, ...) that this app never renders — not a behavior change.
+        resourceConfigurations += listOf("en", "ur")
     }
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -54,6 +61,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
     composeOptions {
         kotlinCompilerExtensionVersion = "1.5.8"
@@ -109,11 +117,14 @@ dependencies {
     // Security (Encrypted SharedPreferences)
     implementation("androidx.security:security-crypto:1.1.0-alpha06")
         
-    // MapLibre Maps & OpenStreetMap
-    implementation("org.maplibre.gl:android-sdk:11.0.0")
     implementation("com.google.android.gms:play-services-location:21.1.0")
 
-    // Google Maps (Search tab's map view + clustering)
+    // Google Play In-App Updates
+    implementation("com.google.android.play:app-update-ktx:2.1.0")
+
+    // Google Maps (used for both the Search tab's map and the Farmer map tab, via
+    // ClusteredMachineryGoogleMap in GoogleMachineryMap.kt — MapLibre was removed in favor of
+    // standardizing on this single map engine, cutting its ~11MB/ABI native library entirely)
     // Pinned to a maps-compose generation compatible with this app's compose-bom (2023.10.01) —
     // 4.3.3 requires a newer Compose runtime and caused a NoSuchMethodError in Material3's
     // CircularProgressIndicator (animation-core got resolved to a mismatched newer version).
