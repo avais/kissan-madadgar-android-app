@@ -11,6 +11,7 @@ import android.os.Build
 import android.os.IBinder
 import android.os.Looper
 import androidx.core.app.NotificationCompat
+import androidx.core.location.LocationCompat
 import com.google.android.gms.location.*
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
@@ -294,11 +295,9 @@ class FarmingTrackingService : Service() {
             android.util.Log.d("FarmingTrackingService", "Skipped logging metric: service is paused")
             return
         }
-        val isMock = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            loc.isMock
-        } else {
-            loc.isFromMockProvider
-        }
+        // LocationCompat.isMock does this exact SDK_INT branch (isMock on 31+, isFromMockProvider
+        // below) internally, without this call site needing to reference the deprecated API directly.
+        val isMock = LocationCompat.isMock(loc)
         val metric = LocationMetric(
             latitude = loc.latitude,
             longitude = loc.longitude,

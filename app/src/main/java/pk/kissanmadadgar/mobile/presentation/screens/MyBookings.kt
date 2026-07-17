@@ -55,7 +55,8 @@ import java.io.FileOutputStream
 @OptIn(ExperimentalMaterial3Api::class, androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 fun FarmerBookingsTab(viewModel: MainViewModel) {
-    val currentRole by viewModel.selectedRole.collectAsState()
+    // Collected (not read directly) so this tab recomposes if the active role changes.
+    viewModel.selectedRole.collectAsState()
     val bookings by viewModel.bookingsFlow.collectAsState()
     val actionState by viewModel.bookingActionState.collectAsState()
     val currentUser by viewModel.currentUser.collectAsState()
@@ -127,16 +128,6 @@ fun FarmerBookingsTab(viewModel: MainViewModel) {
             }
         }
         bookingToStartDirectly = null
-    }
-
-    val directCameraLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.TakePicturePreview()
-    ) { bitmap: Bitmap? ->
-        if (bitmap != null) {
-            handleDirectPhotoCaptured(bitmap)
-        } else {
-            bookingToStartDirectly = null
-        }
     }
 
     var showCameraFrameDialogForDirectFlow by remember { mutableStateOf(false) }
@@ -505,16 +496,25 @@ fun FarmerBookingsTab(viewModel: MainViewModel) {
 
             if (visibleRequests.isEmpty()) {
                 item {
+                    // Each status tab gets its own empty-state copy rather than one generic
+                    // message — a farmer on "مکمل" (COMPLETED) with nothing there yet needs
+                    // different wording than one on "جدید بکنگ" (PENDING) with no new requests.
+                    // A blank search always wins regardless of tab, same as before.
+                    val (emptyTitleRes, emptyDescRes) = when {
+                        searchKeyword.isNotBlank() -> R.string.bookings_search_no_results to R.string.no_bookings_desc
+                        selectedFilter == "PENDING" -> R.string.no_bookings_pending_title to R.string.no_bookings_pending_desc
+                        selectedFilter == "ONGOING" -> R.string.no_bookings_ongoing_title to R.string.no_bookings_ongoing_desc
+                        selectedFilter == "COMPLETED" -> R.string.no_bookings_completed_title to R.string.no_bookings_completed_desc
+                        else -> R.string.no_bookings_available to R.string.no_bookings_desc
+                    }
                     PremiumEmptyState(
-                        message = stringResource(
-                            id = if (searchKeyword.isNotBlank()) R.string.bookings_search_no_results else R.string.no_bookings_available
-                        ),
-                        description = stringResource(id = R.string.no_bookings_desc),
+                        message = stringResource(id = emptyTitleRes),
+                        description = stringResource(id = emptyDescRes),
                         icon = Icons.Default.CalendarMonth
                     )
                 }
             } else {
-                itemsIndexed(visibleRequests, key = { _, item -> item.id }) { index, booking ->
+                itemsIndexed(visibleRequests, key = { _, item -> item.id }) { _, booking ->
                     FarmerRequestCard(
                         booking = booking,
                         modifier = Modifier.animateItemPlacement(),
@@ -644,9 +644,6 @@ fun FarmerBookingsTab(viewModel: MainViewModel) {
         if (target != null) {
             QrScannerView(
                 targetName = "کاشتکار",
-                booking = target,
-                currentLat = lastLatitude ?: 0.0,
-                currentLng = lastLongitude ?: 0.0,
                 onScanCompleted = { qrContent ->
                     val isValid = validateScanData(qrContent, target, lastLatitude ?: 0.0, lastLongitude ?: 0.0, context)
                     if (isValid) {

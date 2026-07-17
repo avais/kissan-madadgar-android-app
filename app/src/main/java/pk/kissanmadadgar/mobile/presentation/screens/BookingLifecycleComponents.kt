@@ -192,7 +192,7 @@ fun RequestDashboardStatsRow(
         horizontalArrangement = Arrangement.spacedBy(10.dp),
         modifier = Modifier.fillMaxWidth()
     ) {
-        itemsIndexed(tabs) { index, tab ->
+        itemsIndexed(tabs) { _, tab ->
             val isSelected = selectedFilter == tab.key
             val animBg by animateColorAsState(
                 targetValue = if (isSelected) tab.activeColor else Color.White,
@@ -978,7 +978,6 @@ fun FarmerBookingDetailBottomSheet(
                 horizontalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 // Machine image
-                val imageRes = getMachineryImageRes(context, booking.machineryImageUrl, booking.machineryName)
                 Box(
                     modifier = Modifier
                         .width(96.dp)
@@ -987,11 +986,9 @@ fun FarmerBookingDetailBottomSheet(
                         .background(AgriGreenLight),
                     contentAlignment = Alignment.Center
                 ) {
-                    Image(
-                        painter = painterResource(id = imageRes),
-                        contentDescription = null,
-                        modifier = Modifier.fillMaxSize(),
-                        contentScale = ContentScale.Crop
+                    MachineryThumbnail(
+                        imageUrl = booking.machineryImageUrl,
+                        modifier = Modifier.fillMaxSize()
                     )
                 }
 
@@ -1512,7 +1509,6 @@ fun FarmerRequestCard(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     // Machine image
-                    val imageRes = getMachineryImageRes(context, booking.machineryImageUrl, booking.machineryName)
                     Box(
                         modifier = Modifier
                             .width(96.dp)
@@ -1521,11 +1517,9 @@ fun FarmerRequestCard(
                             .background(AgriGreenLight),
                         contentAlignment = Alignment.Center
                     ) {
-                        Image(
-                            painter = painterResource(id = imageRes),
-                            contentDescription = null,
-                            modifier = Modifier.fillMaxSize(),
-                            contentScale = ContentScale.Crop
+                        MachineryThumbnail(
+                            imageUrl = booking.machineryImageUrl,
+                            modifier = Modifier.fillMaxSize()
                         )
                     }
 
@@ -1926,18 +1920,18 @@ fun FarmerRequestCard(
                         }
                     }
                 } else {
-                    val hasInternet = isNetworkAvailable(context)
+                    val hasInternetCheck = isNetworkAvailable(context)
                     val serviceShuruuLabel = stringResource(id = pk.kissanmadadgar.mobile.R.string.service_shuruu_karain)
                     val scanKarainLabel = stringResource(id = pk.kissanmadadgar.mobile.R.string.scan_karain)
-                    
+
                     if (showFarmingButton) {
                         val btnText = if (booking.rentalRequestStatus == "APPROVED") {
                             serviceShuruuLabel
                         } else {
-                            if (hasInternet) serviceShuruuLabel else scanKarainLabel
+                            if (hasInternetCheck) serviceShuruuLabel else scanKarainLabel
                         }
-                        
-                        val showQrIcon = !hasInternet && booking.rentalRequestStatus != "APPROVED"
+
+                        val showQrIcon = !hasInternetCheck && booking.rentalRequestStatus != "APPROVED"
                         
                         Spacer(modifier = Modifier.height(10.dp))
                         Button(
@@ -1984,7 +1978,7 @@ fun FarmerRequestCard(
                     }
 
                     if (showProviderScanQrButton) {
-                        val btnText = if (hasInternet) "کیو آر کوڈ اسکین کریں" else scanKarainLabel
+                        val btnText = if (hasInternetCheck) "کیو آر کوڈ اسکین کریں" else scanKarainLabel
                         Spacer(modifier = Modifier.height(10.dp))
                         Button(
                             onClick = { onScanQrClick?.invoke() },
@@ -3495,17 +3489,38 @@ private fun statusUi(status: BookingStatus): StatusUi = when (status) {
     BookingStatus.CANCELLED -> StatusUi("منسوخ", DisabledGray, Color(0xFFF0F0F0))
 }
 
-private fun getMachineryImageRes(context: Context, imageUrl: String?, machineryName: String): Int {
+private fun getMachineryImageRes(context: Context, imageUrl: String?): Int {
     if (!imageUrl.isNullOrBlank()) {
         val resId = context.resources.getIdentifier(imageUrl, "drawable", context.packageName)
         if (resId != 0) return resId
     }
-    val name = machineryName.lowercase()
-    return when {
-        name.contains("سیڈر") || name.contains("seeder") -> R.drawable.super_seeder_custom
-        name.contains("بیلر") || name.contains("baler") || name.contains("bailer") -> R.drawable.bailer
-        name.contains("ہارویسٹر") || name.contains("harvester") -> R.drawable.harvester
-        else -> R.drawable.super_seeder_custom
+    return R.drawable.other_machinery_clean
+}
+
+// booking.machineryImageUrl is a real remote download URL from the backend, not a bundled
+// drawable name — getMachineryImageRes's getIdentifier() lookup can never match that, so it
+// always fell through to the default illustration. Loads it via Coil for http(s) URLs, same as
+// the map/search screens already do, and only falls back to the drawable-name lookup for any
+// legacy non-URL value.
+@Composable
+private fun MachineryThumbnail(imageUrl: String?, modifier: Modifier = Modifier) {
+    val context = LocalContext.current
+    if (!imageUrl.isNullOrBlank() && imageUrl.startsWith("http")) {
+        coil.compose.AsyncImage(
+            model = imageUrl,
+            contentDescription = null,
+            contentScale = ContentScale.Crop,
+            placeholder = painterResource(id = R.drawable.other_machinery_clean),
+            error = painterResource(id = R.drawable.other_machinery_clean),
+            modifier = modifier
+        )
+    } else {
+        Image(
+            painter = painterResource(id = getMachineryImageRes(context, imageUrl)),
+            contentDescription = null,
+            contentScale = ContentScale.Crop,
+            modifier = modifier
+        )
     }
 }
 
@@ -3756,18 +3771,15 @@ fun BookingDetailOverlay(
                                     Spacer(modifier = Modifier.height(8.dp))
 
                                     // Machine Title
-                                    val imageRes = getMachineryImageRes(context, booking.machineryImageUrl, booking.machineryName)
                                     Row(
                                         modifier = Modifier.fillMaxWidth(),
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
-                                        Image(
-                                            painter = painterResource(id = imageRes),
-                                            contentDescription = null,
+                                        MachineryThumbnail(
+                                            imageUrl = booking.machineryImageUrl,
                                             modifier = Modifier
                                                 .size(42.dp)
-                                                .clip(RoundedCornerShape(8.dp)),
-                                            contentScale = ContentScale.Crop
+                                                .clip(RoundedCornerShape(8.dp))
                                         )
                                         Spacer(modifier = Modifier.width(8.dp))
                                         Text(
@@ -4796,9 +4808,6 @@ fun QrCodeGenerator(content: String) {
 @Composable
 fun QrScannerView(
     targetName: String,
-    booking: Booking,
-    currentLat: Double,
-    currentLng: Double,
     onScanCompleted: (String) -> Unit,
     onCancel: () -> Unit
 ) {

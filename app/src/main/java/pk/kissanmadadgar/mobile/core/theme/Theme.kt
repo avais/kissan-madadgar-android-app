@@ -1,6 +1,5 @@
 package pk.kissanmadadgar.mobile.core.theme
 
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
@@ -33,7 +32,13 @@ private val LightColorScheme = lightColorScheme(
 
 @Composable
 fun KissanMadadgarTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
+    // Always false, not isSystemInDarkTheme() — every screen in this app hardcodes light-mode
+    // colors (white cards, black/dark-gray text) with no actual dark-mode-adapted design anywhere.
+    // Letting the theme auto-switch to DarkColorScheme on a system-dark-mode device left any
+    // component that relies on theme-inherited colors (instead of an explicit color) rendering
+    // DarkColorScheme's light onSurface/onBackground tones against those hardcoded light
+    // backgrounds — e.g. near-invisible light-gray text in a white DropdownMenu popup.
+    darkTheme: Boolean = false,
     content: @Composable () -> Unit
 ) {
     val colorScheme = if (darkTheme) DarkColorScheme else LightColorScheme

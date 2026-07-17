@@ -28,7 +28,10 @@ data class PendingUpload(
     val altitude: Double = 0.0,
     val isMock: Boolean = false,
     val deviceId: String = "",
-    val timestamp: Long
+    val timestamp: Long,
+    // Elapsed active-tracking seconds (paused time excluded), only meaningful for COMPLETE —
+    // captured at enqueue time since the active session is cleared once this upload succeeds.
+    val totalServiceTime: Long = 0L
 )
 
 class FarmingUploadSyncManager private constructor(
@@ -88,7 +91,8 @@ class FarmingUploadSyncManager private constructor(
         heading: Double = 0.0,
         altitude: Double = 0.0,
         isMock: Boolean = false,
-        deviceId: String = ""
+        deviceId: String = "",
+        totalServiceTime: Long = 0L
     ) {
         val pending = PendingUpload(
             actionType = actionType,
@@ -102,7 +106,8 @@ class FarmingUploadSyncManager private constructor(
             altitude = altitude,
             isMock = isMock,
             deviceId = deviceId,
-            timestamp = System.currentTimeMillis()
+            timestamp = System.currentTimeMillis(),
+            totalServiceTime = totalServiceTime
         )
         
         scope.launch {
@@ -176,6 +181,15 @@ class FarmingUploadSyncManager private constructor(
             if (queue.isEmpty()) return true
 
             val item = queue.first()
+            // Gson can leave a non-null Kotlin field as null when deserializing a legacy/malformed
+            // queue entry (e.g. persisted by an older app version), bypassing the compile-time
+            // non-null guarantee — File(null) below would then throw an NPE and crash-loop every
+            // launch, since polling restarts on startup. Drop such an entry instead.
+            if (item.localFilePath.isNullOrBlank() || item.bookingId.isNullOrBlank()) {
+                queue.removeAt(0)
+                saveQueue(queue)
+                continue
+            }
             val file = File(item.localFilePath)
             if (!file.exists()) {
                 // File does not exist, remove it from queue
@@ -240,8 +254,26 @@ class FarmingUploadSyncManager private constructor(
 
             // 2. Call kickoff or completion endpoint
             val trackList = FarmingTrackingService.getTrackLogs(context, item.bookingId)
-            val metaDataJson = if (item.actionType == "COMPLETE" && trackList.isNotEmpty()) {
-                Gson().toJson(trackList)
+            // Backend's startPictureMetaData/endPictureMetaData fields are Strings (JSON-encoded),
+            // not nested objects — toJson (not toJsonTree) here.
+            // totalServiceTime (elapsed active-tracking seconds, paused time excluded) is only
+            // meaningful for COMPLETE (endPictureMetaData) — a session that's just starting has no
+            // elapsed time yet, so it's omitted from the START (startPictureMetaData) shape below.
+            val metaDataJson = if (item.actionType == "COMPLETE") {
+                val metaDataMap: Map<String, Any?> = if (trackList.isNotEmpty()) {
+                    mapOf(
+                        "trackLogs" to trackList,
+                        "totalServiceTime" to item.totalServiceTime
+                    )
+                } else {
+                    mapOf(
+                        "latitude" to item.latitude,
+                        "longitude" to item.longitude,
+                        "timestamp" to item.timestamp,
+                        "totalServiceTime" to item.totalServiceTime
+                    )
+                }
+                Gson().toJson(metaDataMap)
             } else {
                 val metaDataMap = mapOf(
                     "latitude" to item.latitude,
@@ -341,6 +373,7 @@ class FarmingUploadSyncManager private constructor(
         altitude: Double = 0.0,
         isMock: Boolean = false,
         deviceId: String = "",
+        totalServiceTime: Long = 0L,
         onQueuedSyncSuccess: () -> Unit
     ): UploadOutcome {
         if (isInternetAvailable()) {
@@ -356,7 +389,8 @@ class FarmingUploadSyncManager private constructor(
                 altitude = altitude,
                 isMock = isMock,
                 deviceId = deviceId,
-                timestamp = System.currentTimeMillis()
+                timestamp = System.currentTimeMillis(),
+                totalServiceTime = totalServiceTime
             )
             val success = withContext(Dispatchers.IO) { performUpload(item) }
             if (success) {
@@ -366,7 +400,7 @@ class FarmingUploadSyncManager private constructor(
             // losing the action.
         }
 
-        enqueueUpload(actionType, bookingId, localFilePath, latitude, longitude, accuracy, speed, heading, altitude, isMock, deviceId)
+        enqueueUpload(actionType, bookingId, localFilePath, latitude, longitude, accuracy, speed, heading, altitude, isMock, deviceId, totalServiceTime)
         startPolling(onQueuedSyncSuccess)
         return UploadOutcome.QUEUED
     }

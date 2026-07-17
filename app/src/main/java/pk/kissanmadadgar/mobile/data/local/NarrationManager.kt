@@ -40,7 +40,15 @@ object NarrationManager {
             override fun onDone(utteranceId: String?) {
                 if (_activeUtteranceId.value == utteranceId) _activeUtteranceId.value = null
             }
+            // onError(String?) is still abstract in UtteranceProgressListener (not just deprecated
+            // -and-optional) so it must be implemented; the real handling lives in the modern
+            // two-arg overload below, which the TTS engine calls instead on API 21+ (minSdk 24
+            // here), so this deprecated one is an unavoidable, otherwise-unused pass-through shim.
+            @Deprecated("Required abstract override; real logic is in onError(String?, Int)")
             override fun onError(utteranceId: String?) {
+                onError(utteranceId, -1)
+            }
+            override fun onError(utteranceId: String?, errorCode: Int) {
                 if (_activeUtteranceId.value == utteranceId) _activeUtteranceId.value = null
             }
         })

@@ -174,6 +174,11 @@ interface AuthApiService {
 
     @GET("api/auth/android/government-projects")
     suspend fun getGovernmentProjects(): Response<List<GovernmentProjectDto>>
+
+    // Flat key -> Urdu display text map mirroring the entries in res/values/strings.xml, so
+    // in-app text can be updated from the backend without an app release. See RemoteStringsStore.
+    @GET("api/auth/android/getmessagesvalue")
+    suspend fun getMessagesValue(): Response<Map<String, String>>
 }
 
 data class PushTokenRequest(
@@ -204,6 +209,9 @@ data class AndroidNotificationsPageResponse(
 data class StartFarmingTakerRequest(
     val rentalBookingId: Long,
     val startPicture: String, // UUID as String
+    // Backend's DTO field is a String (JSON-encoded), not a nested object — sending a nested
+    // object here throws "Cannot deserialize value of type `java.lang.String` from Object value"
+    // server-side. Build with Gson().toJson(...), not toJsonTree(...).
     val startPictureMetaData: String
 )
 
@@ -221,6 +229,8 @@ data class GpsLogRequest(
 data class StartFarmingProviderRequest(
     val rentalBookingId: Long,
     val endPicture: String, // UUID as String
+    // Same String-not-object contract as StartFarmingTakerRequest.startPictureMetaData above —
+    // build with Gson().toJson(...), not toJsonTree(...).
     val endPictureMetaData: String,
     val gpsLogs: List<GpsLogRequest>
 )

@@ -33,8 +33,24 @@ class KissanFirebaseMessagingService : FirebaseMessagingService() {
     private val serviceScope = CoroutineScope(Dispatchers.IO)
     private val notificationIdCounter = AtomicInteger(1000)
 
+    // onNewToken is deprecated in favor of onRegistered(String) (identical signature), but this
+    // app has not opted into Firebase's newer registration model (no
+    // firebase_messaging_installation_id_enabled manifest meta-data), so onNewToken is what
+    // actually fires today — kept as the guaranteed working path. onRegistered is overridden
+    // below with the same logic so this also keeps working if that ever changes.
+    // super.onNewToken() is skipped deliberately: decompiling the base class confirms its body is
+    // an empty no-op (just `return`), so calling it is a pure no-op deprecated-API call with
+    // nothing to preserve.
     override fun onNewToken(token: String) {
-        super.onNewToken(token)
+        registerToken(token)
+    }
+
+    override fun onRegistered(token: String) {
+        super.onRegistered(token)
+        registerToken(token)
+    }
+
+    private fun registerToken(token: String) {
         val authToken = sessionManager.getAuthToken() ?: return
         serviceScope.launch {
             try {

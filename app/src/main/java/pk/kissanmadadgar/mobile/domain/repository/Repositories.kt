@@ -14,11 +14,7 @@ import pk.kissanmadadgar.mobile.data.remote.dto.MyMachinesResponseDto
 
 interface AuthRepository {
     suspend fun login(phone: String, cnic: String?, latitude: Double, longitude: Double): Result<String>
-    suspend fun verifySupplierCnic(cnic: String): Result<User>
     suspend fun verifyOtp(phoneNumber: String, otp: String, role: UserRole, guestToken: String? = null, type: String? = null): Result<User>
-    suspend fun registerFarmer(phoneNumber: String, fullName: String, address: String): Result<User>
-    suspend fun adminLogin(email: String, pass: String): Result<User>
-    suspend fun getCurrentUser(): User?
     suspend fun logout(): Result<Unit>
     suspend fun getImplements(): Result<List<ImplementDto>>
     suspend fun getDistricts(): Result<List<DistrictDto>>

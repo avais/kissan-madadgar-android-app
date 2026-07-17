@@ -1,5 +1,8 @@
 package pk.kissanmadadgar.mobile.presentation.screens
 
+import android.content.res.Configuration
+import androidx.compose.animation.*
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -13,6 +16,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.LocationCity
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Phone
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.SupportAgent
 import androidx.compose.material3.*
@@ -21,6 +25,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -54,6 +59,8 @@ import kotlinx.coroutines.launch
 import pk.kissanmadadgar.mobile.R
 import pk.kissanmadadgar.mobile.core.theme.AgriGreenPrimary
 import pk.kissanmadadgar.mobile.domain.model.Machinery
+import pk.kissanmadadgar.mobile.presentation.MainViewModel
+import java.util.Locale
 
 private class MachineryClusterItem(val machinery: Machinery) : ClusterItem {
     private val latLng = LatLng(machinery.latitude, machinery.longitude)
@@ -63,13 +70,28 @@ private class MachineryClusterItem(val machinery: Machinery) : ClusterItem {
     override fun getZIndex(): Float = 0f
 }
 
-private fun machineryMarkerFallbackRes(nameUr: String): Int {
-    val name = nameUr.lowercase()
-    return when {
-        name.contains("بیلر") || name.contains("baler") || name.contains("bailer") -> R.drawable.bailer
-        name.contains("ہارویسٹر") || name.contains("harvester") -> R.drawable.harvester
-        else -> R.drawable.super_seeder_custom
-    }
+private fun machineryMarkerFallbackRes(): Int {
+    return R.drawable.other_machinery_clean
+}
+
+// Machinery is spread across all of Punjab, not just around the user's own GPS position, so the
+// map offers to re-query around wherever the user pans to instead of only ever the fixed device
+// location. These two constants gate that: don't bother re-offering a search for a pan smaller
+// than MIN_AREA_SEARCH_DISTANCE_METERS (avoids nagging on tiny nudges), and don't offer it at all
+// below MIN_AREA_SEARCH_ZOOM (the backend returns "nearest N to a point", not a bounds query, so at
+// province-level zoom that would just cluster results on one edge of the visible map).
+private const val MIN_AREA_SEARCH_DISTANCE_METERS = 800.0
+private const val MIN_AREA_SEARCH_ZOOM = 10f
+
+private fun distanceMeters(lat1: Double, lng1: Double, lat2: Double, lng2: Double): Double {
+    val earthRadiusMeters = 6371000.0
+    val dLat = Math.toRadians(lat2 - lat1)
+    val dLng = Math.toRadians(lng2 - lng1)
+    val a = kotlin.math.sin(dLat / 2) * kotlin.math.sin(dLat / 2) +
+        kotlin.math.cos(Math.toRadians(lat1)) * kotlin.math.cos(Math.toRadians(lat2)) *
+        kotlin.math.sin(dLng / 2) * kotlin.math.sin(dLng / 2)
+    val c = 2 * kotlin.math.atan2(kotlin.math.sqrt(a), kotlin.math.sqrt(1 - a))
+    return earthRadiusMeters * c
 }
 
 @Composable
@@ -103,7 +125,7 @@ private fun MachineryMarkerBadge(machinery: Machinery, sizeDp: Int = 48) {
         } else {
             val resId = remember(imageUrl, machinery.nameUr) {
                 val identifier = imageUrl?.let { context.resources.getIdentifier(it, "drawable", context.packageName) } ?: 0
-                if (identifier != 0) identifier else machineryMarkerFallbackRes(machinery.nameUr)
+                if (identifier != 0) identifier else machineryMarkerFallbackRes()
             }
             Image(
                 painter = painterResource(id = resId),
@@ -176,6 +198,63 @@ private fun createUserPositionBitmapDescriptor(context: android.content.Context)
     return BitmapDescriptorFactory.fromBitmap(bitmap)
 }
 
+// Marks where the "search this area" distances are measured from. Drawn as a soft radar-style
+// pulse (a static double ring, since MarkerComposable isn't available at this maps-compose version
+// to animate a real one) around a magnifying-glass badge — reads as "actively searching here" and
+// matches the app's own circular-badge marker style instead of Google's generic teardrop pin.
+private fun createSearchCenterBitmapDescriptor(context: android.content.Context): BitmapDescriptor {
+    val density = context.resources.displayMetrics.density
+    val size = (72 * density).toInt()
+    val bitmap = android.graphics.Bitmap.createBitmap(size, size, android.graphics.Bitmap.Config.ARGB_8888)
+    val canvas = android.graphics.Canvas(bitmap)
+    val center = size / 2f
+    val coreRadius = size * 0.27f
+    val outerPulseRadius = size * 0.48f
+    val innerPulseRadius = size * 0.38f
+    val accentColor = android.graphics.Color.rgb(255, 111, 0)
+
+    canvas.drawCircle(center, center, outerPulseRadius, android.graphics.Paint().apply {
+        isAntiAlias = true
+        color = android.graphics.Color.argb(50, 255, 111, 0)
+        style = android.graphics.Paint.Style.FILL
+    })
+    canvas.drawCircle(center, center, innerPulseRadius, android.graphics.Paint().apply {
+        isAntiAlias = true
+        color = android.graphics.Color.argb(90, 255, 111, 0)
+        style = android.graphics.Paint.Style.FILL
+    })
+    canvas.drawCircle(center, center, coreRadius, android.graphics.Paint().apply {
+        isAntiAlias = true
+        color = accentColor
+        style = android.graphics.Paint.Style.FILL
+    })
+    canvas.drawCircle(center, center, coreRadius, android.graphics.Paint().apply {
+        isAntiAlias = true
+        color = android.graphics.Color.WHITE
+        style = android.graphics.Paint.Style.STROKE
+        strokeWidth = 3f * density
+    })
+
+    val glyphPaint = android.graphics.Paint().apply {
+        isAntiAlias = true
+        color = android.graphics.Color.WHITE
+        style = android.graphics.Paint.Style.STROKE
+        strokeWidth = 2.6f * density
+        strokeCap = android.graphics.Paint.Cap.ROUND
+    }
+    val glassRadius = coreRadius * 0.38f
+    val glassCenterX = center - coreRadius * 0.14f
+    val glassCenterY = center - coreRadius * 0.14f
+    canvas.drawCircle(glassCenterX, glassCenterY, glassRadius, glyphPaint)
+    canvas.drawLine(
+        glassCenterX + glassRadius * 0.7f, glassCenterY + glassRadius * 0.7f,
+        glassCenterX + glassRadius * 1.7f, glassCenterY + glassRadius * 1.7f,
+        glyphPaint
+    )
+
+    return BitmapDescriptorFactory.fromBitmap(bitmap)
+}
+
 @Composable
 private fun MachineryPopupCard(
     machinery: Machinery,
@@ -184,6 +263,7 @@ private fun MachineryPopupCard(
     onClick: () -> Unit,
     onBook: () -> Unit,
     onCall: () -> Unit,
+    onClose: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Card(
@@ -234,6 +314,22 @@ private fun MachineryPopupCard(
                             contentDescription = stringResource(id = R.string.content_description_listen_audio),
                             tint = Color.White,
                             modifier = Modifier.size(15.dp)
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Box(
+                        modifier = Modifier
+                            .size(24.dp)
+                            .clip(CircleShape)
+                            .background(Color(0xFFF0F0F0))
+                            .clickable(onClick = onClose),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = stringResource(id = R.string.content_description_close_popup),
+                            tint = Color.DarkGray,
+                            modifier = Modifier.size(14.dp)
                         )
                     }
                 }
@@ -318,19 +414,56 @@ private fun hasLocationPermission(context: android.content.Context): Boolean {
  * popup. Used both by the small embedded preview (gestures disabled) and the full-screen dialog.
  * The camera auto-fits to bounds covering every machine plus the user's own position whenever the
  * machinery list changes (district filter, search, tab open) — never on every GPS tick, since
- * machineryList only changes on an actual fetch, not on location updates.
+ * machineryList only changes on an actual fetch, not on location updates. That auto-fit stops once
+ * the user taps "search this area" (see onSearchThisArea below) — from that point the user owns
+ * the camera and results are drawn wherever they've panned, not re-centered on them.
  */
+// Clustering() is gated behind maps-compose-utils' own experimental marker (no stable
+// non-experimental clustering API exists in this library version) — this opts in to that
+// intentionally, it is not suppressing a warning about our own code.
+@OptIn(com.google.maps.android.compose.MapsComposeExperimentalApi::class)
 @Composable
-private fun ClusteredMachineryGoogleMap(
+internal fun ClusteredMachineryGoogleMap(
     machineryList: List<Machinery>,
     userLatLng: LatLng,
     gesturesEnabled: Boolean,
     showControls: Boolean,
+    isAuthorized: Boolean,
+    viewModel: MainViewModel,
     onNavigateToDetail: (String) -> Unit,
     onNavigateToBooking: ((String) -> Unit)?,
+    // Called with (lat, lng) when the user pans somewhere new and taps the "search this area"
+    // chip. Null (the default) leaves that chip permanently hidden — used by embedded previews
+    // that have no fetch of their own to trigger.
+    onSearchThisArea: ((Double, Double) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
+    // Guest tap-to-book must go through the same OTP gate as the listing view's Book button
+    // (see MachineryListItem in FarmerSearchTab.kt) instead of navigating straight to booking.
+    var showAuthFlow by remember { mutableStateOf(false) }
+    var pendingAction by remember { mutableStateOf<(() -> Unit)?>(null) }
+
+    if (showAuthFlow) {
+        FarmerAuthScreen(
+            viewModel = viewModel,
+            onDismiss = { showAuthFlow = false },
+            onSuccess = {
+                pendingAction?.invoke()
+                pendingAction = null
+                showAuthFlow = false
+            },
+            isDialog = true
+        )
+    }
+    // Google's Maps SDK has no direct setLocale API — it renders street/place labels and its own
+    // UI (attribution, legal text) in whatever Locale the Context it was created with carries, so
+    // this app forces Urdu regardless of the device's system locale.
+    val urduMapContext = remember(context) {
+        val config = Configuration(context.resources.configuration)
+        config.setLocale(Locale("ur"))
+        context.createConfigurationContext(config)
+    }
     val coroutineScope = rememberCoroutineScope()
     var selectedMachinery by remember { mutableStateOf<Machinery?>(null) }
     var isMapLoaded by remember { mutableStateOf(false) }
@@ -355,8 +488,16 @@ private fun ClusteredMachineryGoogleMap(
         machineryList.map { MachineryClusterItem(it) }
     }
 
+    // Once true, the user has taken over the camera via "search this area" — the auto-fit below
+    // stops running so a subsequent filter/keyword change doesn't yank the map back to fit the
+    // user's own position again.
+    var cameraUnderUserControl by remember { mutableStateOf(false) }
+    var searchedCenter by remember { mutableStateOf(userLatLng) }
+    var pendingAreaSearch by remember { mutableStateOf<LatLng?>(null) }
+    val isSearchingArea by viewModel.isLoadingAvailableMachinery.collectAsState()
+
     LaunchedEffect(isMapLoaded, machineryList) {
-        if (!isMapLoaded) return@LaunchedEffect
+        if (!isMapLoaded || cameraUnderUserControl) return@LaunchedEffect
         val boundsBuilder = LatLngBounds.Builder()
         boundsBuilder.include(userLatLng)
         machineryList.forEach { boundsBuilder.include(LatLng(it.latitude, it.longitude)) }
@@ -371,47 +512,85 @@ private fun ClusteredMachineryGoogleMap(
         }
     }
 
-    Box(modifier = modifier) {
-        GoogleMap(
-            modifier = Modifier.fillMaxSize(),
-            cameraPositionState = cameraPositionState,
-            onMapLoaded = { isMapLoaded = true },
-            // Google's own "my location" blue dot is deliberately left off: it's driven by
-            // Play Services' own fused location, a different source than the app's own GPS
-            // listener that userLatLng comes from, so the two would drift apart and show two
-            // slightly different positions on screen. The custom marker below is the single
-            // source of truth for where the user is shown on this map.
-            properties = MapProperties(isMyLocationEnabled = false),
-            uiSettings = MapUiSettings(
-                zoomControlsEnabled = false,
-                scrollGesturesEnabled = gesturesEnabled,
-                zoomGesturesEnabled = gesturesEnabled,
-                tiltGesturesEnabled = gesturesEnabled,
-                rotationGesturesEnabled = gesturesEnabled,
-                myLocationButtonEnabled = false,
-                compassEnabled = gesturesEnabled
-            )
-        ) {
-            val userIcon = remember(context) { createUserPositionBitmapDescriptor(context) }
-            Marker(
-                state = MarkerState(position = userLatLng),
-                title = stringResource(id = R.string.user_location_title),
-                icon = userIcon
-            )
-
-            Clustering(
-                items = clusterItems,
-                onClusterItemClick = { item ->
-                    selectedMachinery = item.machinery
-                    true
-                },
-                clusterContent = { cluster ->
-                    ClusterBadge(count = cluster.size)
-                },
-                clusterItemContent = { item ->
-                    MachineryMarkerBadge(machinery = item.machinery)
+    // Offers "search this area" once the user finishes a pan/zoom (camera goes idle) far enough
+    // from wherever was last searched. isMoving is true for the whole duration of a gesture/fling
+    // and flips back to false once the camera settles — that false edge is the idle signal.
+    if (onSearchThisArea != null) {
+        var wasCameraMoving by remember { mutableStateOf(false) }
+        LaunchedEffect(cameraPositionState) {
+            snapshotFlow { cameraPositionState.isMoving }.collect { isMoving ->
+                if (wasCameraMoving && !isMoving) {
+                    val target = cameraPositionState.position.target
+                    val moved = distanceMeters(
+                        searchedCenter.latitude, searchedCenter.longitude,
+                        target.latitude, target.longitude
+                    )
+                    pendingAreaSearch = if (moved > MIN_AREA_SEARCH_DISTANCE_METERS) target else null
                 }
-            )
+                wasCameraMoving = isMoving
+            }
+        }
+    }
+
+    Box(modifier = modifier) {
+        CompositionLocalProvider(LocalContext provides urduMapContext) {
+            GoogleMap(
+                modifier = Modifier.fillMaxSize(),
+                cameraPositionState = cameraPositionState,
+                onMapLoaded = { isMapLoaded = true },
+                // Google's own "my location" blue dot is deliberately left off: it's driven by
+                // Play Services' own fused location, a different source than the app's own GPS
+                // listener that userLatLng comes from, so the two would drift apart and show two
+                // slightly different positions on screen. The custom marker below is the single
+                // source of truth for where the user is shown on this map.
+                properties = MapProperties(isMyLocationEnabled = false),
+                uiSettings = MapUiSettings(
+                    zoomControlsEnabled = false,
+                    scrollGesturesEnabled = gesturesEnabled,
+                    zoomGesturesEnabled = gesturesEnabled,
+                    tiltGesturesEnabled = gesturesEnabled,
+                    rotationGesturesEnabled = gesturesEnabled,
+                    myLocationButtonEnabled = false,
+                    compassEnabled = gesturesEnabled
+                )
+            ) {
+                val userIcon = remember(context) { createUserPositionBitmapDescriptor(context) }
+                Marker(
+                    state = MarkerState(position = userLatLng),
+                    title = stringResource(id = R.string.user_location_title),
+                    icon = userIcon
+                )
+
+                // Every distanceText on the machinery pins is measured from searchedCenter (the
+                // backend computes it from whatever lat/lng the request carried), not from the
+                // user's real GPS position once "search this area" has been used at least once —
+                // without a visible marker at that point, the distance numbers in the popup card
+                // have no reference on screen to make sense of. A plain default pin (not the same
+                // circular badge style as the user/machinery markers) reads as a distinct
+                // "reference point" rather than another one of those.
+                if (cameraUnderUserControl) {
+                    val searchCenterIcon = remember(context) { createSearchCenterBitmapDescriptor(context) }
+                    Marker(
+                        state = MarkerState(position = searchedCenter),
+                        title = stringResource(id = R.string.search_center_marker_title),
+                        icon = searchCenterIcon
+                    )
+                }
+
+                Clustering(
+                    items = clusterItems,
+                    onClusterItemClick = { item ->
+                        selectedMachinery = item.machinery
+                        true
+                    },
+                    clusterContent = { cluster ->
+                        ClusterBadge(count = cluster.size)
+                    },
+                    clusterItemContent = { item ->
+                        MachineryMarkerBadge(machinery = item.machinery)
+                    }
+                )
+            }
         }
 
         if (showControls) {
@@ -439,6 +618,24 @@ private fun ClusteredMachineryGoogleMap(
             )
         }
 
+        if (onSearchThisArea != null) {
+            pendingAreaSearch?.let { target ->
+                SearchThisAreaChip(
+                    zoomedInEnough = cameraPositionState.position.zoom >= MIN_AREA_SEARCH_ZOOM,
+                    isLoading = isSearchingArea,
+                    onClick = {
+                        cameraUnderUserControl = true
+                        searchedCenter = target
+                        pendingAreaSearch = null
+                        onSearchThisArea(target.latitude, target.longitude)
+                    },
+                    modifier = Modifier
+                        .align(Alignment.TopCenter)
+                        .padding(top = 16.dp)
+                )
+            }
+        }
+
         selectedMachinery?.let { machinery ->
             MachineryPopupCard(
                 machinery = machinery,
@@ -447,30 +644,59 @@ private fun ClusteredMachineryGoogleMap(
                     if (isSpeaking) {
                         pk.kissanmadadgar.mobile.data.local.NarrationManager.stop()
                     } else {
-                        val text = context.getString(
-                            R.string.map_popup_narration_format,
-                            machinery.providerName,
-                            machinery.nameUr,
-                            machinery.distanceText ?: "",
-                            machinery.providerPhone,
-                            machinery.rating.toString()
-                        )
+                        // Guests never see the real contact number (it's masked to something like
+                        // "XXXXX-0304" in the UI), so it must not be read aloud either — use a
+                        // separate narration that prompts booking/login instead of the phone number.
+                        val text = if (isAuthorized) {
+                            context.getString(
+                                R.string.map_popup_narration_format,
+                                machinery.providerName,
+                                machinery.nameUr,
+                                machinery.distanceText ?: "",
+                                machinery.providerPhone,
+                                machinery.rating.toString()
+                            )
+                        } else {
+                            context.getString(
+                                R.string.map_popup_narration_guest_format,
+                                machinery.providerName,
+                                machinery.nameUr,
+                                machinery.distanceText ?: "",
+                                machinery.rating.toString()
+                            )
+                        }
                         pk.kissanmadadgar.mobile.data.local.NarrationManager.speak(text, "map_popup_narration")
                     }
                 },
                 onClick = { onNavigateToDetail(machinery.id) },
-                onBook = { onNavigateToBooking?.invoke(machinery.id) },
+                onBook = {
+                    if (isAuthorized) {
+                        onNavigateToBooking?.invoke(machinery.id)
+                    } else {
+                        pendingAction = { onNavigateToBooking?.invoke(machinery.id) }
+                        showAuthFlow = true
+                    }
+                },
                 onCall = {
                     val intent = android.content.Intent(android.content.Intent.ACTION_DIAL).apply {
                         data = android.net.Uri.parse("tel:${machinery.providerPhone}")
                     }
                     context.startActivity(intent)
                 },
+                onClose = { selectedMachinery = null },
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
                     .padding(10.dp)
                     .fillMaxWidth(0.95f)
             )
+        }
+
+        AnimatedVisibility(
+            visible = !isMapLoaded,
+            exit = fadeOut(),
+            modifier = Modifier.fillMaxSize()
+        ) {
+            MapLoadingOverlay()
         }
     }
 }
@@ -513,6 +739,126 @@ private fun MapControlButton(
     }
 }
 
+// Google Maps renders a bare beige/cream background the instant it's attached, then pops in
+// tiles + markers only once onMapLoaded fires — with nothing covering that gap it reads as a
+// half-broken blank screen. This overlay sits on top until isMapLoaded flips true, then fades out.
+@Composable
+private fun MapLoadingOverlay(modifier: Modifier = Modifier) {
+    val infiniteTransition = rememberInfiniteTransition(label = "map_loading")
+    val pinScale by infiniteTransition.animateFloat(
+        initialValue = 0.85f,
+        targetValue = 1.15f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(700, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "pin_scale"
+    )
+    val ringScale by infiniteTransition.animateFloat(
+        initialValue = 0.6f,
+        targetValue = 1.7f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1200, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "ring_scale"
+    )
+    val ringAlpha by infiniteTransition.animateFloat(
+        initialValue = 0.45f,
+        targetValue = 0f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1200, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "ring_alpha"
+    )
+
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .background(Color.White),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Box(modifier = Modifier.size(96.dp), contentAlignment = Alignment.Center) {
+                Box(
+                    modifier = Modifier
+                        .size(72.dp)
+                        .graphicsLayer(scaleX = ringScale, scaleY = ringScale, alpha = ringAlpha)
+                        .clip(CircleShape)
+                        .background(AgriGreenPrimary)
+                )
+                Box(
+                    modifier = Modifier
+                        .size(64.dp)
+                        .graphicsLayer(scaleX = pinScale, scaleY = pinScale)
+                        .clip(CircleShape)
+                        .background(AgriGreenPrimary),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.LocationOn,
+                        contentDescription = null,
+                        tint = Color.White,
+                        modifier = Modifier.size(34.dp)
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.height(20.dp))
+            Text(
+                text = stringResource(id = R.string.map_loading_text),
+                color = Color.DarkGray,
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 15.sp
+            )
+        }
+    }
+}
+
+@Composable
+private fun SearchThisAreaChip(
+    zoomedInEnough: Boolean,
+    isLoading: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier
+            .shadow(elevation = 3.dp, shape = RoundedCornerShape(24.dp))
+            .clip(RoundedCornerShape(24.dp))
+            .background(Color.White)
+            .then(
+                if (zoomedInEnough && !isLoading) Modifier.clickable(onClick = onClick) else Modifier
+            )
+            .padding(horizontal = 16.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        if (isLoading) {
+            CircularProgressIndicator(
+                modifier = Modifier.size(16.dp),
+                strokeWidth = 2.dp,
+                color = AgriGreenPrimary
+            )
+        } else {
+            Icon(
+                imageVector = Icons.Default.Search,
+                contentDescription = stringResource(id = R.string.content_description_search_this_area),
+                tint = if (zoomedInEnough) AgriGreenPrimary else Color.Gray,
+                modifier = Modifier.size(18.dp)
+            )
+        }
+        Spacer(modifier = Modifier.width(6.dp))
+        Text(
+            text = stringResource(
+                id = if (zoomedInEnough) R.string.search_this_area else R.string.zoom_in_to_search_area
+            ),
+            color = if (zoomedInEnough) Color.Black else Color.Gray,
+            fontWeight = FontWeight.Bold,
+            fontSize = 13.sp
+        )
+    }
+}
+
 /**
  * Full-screen, fully interactive machinery map. Opened directly (no intermediate small preview
  * step) whenever the user taps the "نقشہ" (Map) option in the Search tab.
@@ -521,9 +867,12 @@ private fun MapControlButton(
 fun FullScreenMachineryMap(
     machineryList: List<Machinery>,
     userLatLng: LatLng,
+    isAuthorized: Boolean,
+    viewModel: MainViewModel,
     onNavigateToDetail: (String) -> Unit,
     onNavigateToBooking: ((String) -> Unit)?,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    onSearchThisArea: ((Double, Double) -> Unit)? = null
 ) {
     Dialog(
         onDismissRequest = onDismiss,
@@ -536,8 +885,11 @@ fun FullScreenMachineryMap(
                 userLatLng = userLatLng,
                 gesturesEnabled = true,
                 showControls = true,
+                isAuthorized = isAuthorized,
+                viewModel = viewModel,
                 onNavigateToDetail = onNavigateToDetail,
                 onNavigateToBooking = onNavigateToBooking,
+                onSearchThisArea = onSearchThisArea,
                 modifier = Modifier.fillMaxSize()
             )
 

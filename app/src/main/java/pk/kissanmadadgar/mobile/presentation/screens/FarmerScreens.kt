@@ -54,10 +54,6 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.runtime.mutableStateMapOf
-import org.maplibre.android.maps.MapView
-import org.maplibre.android.geometry.LatLng
-import org.maplibre.android.annotations.MarkerOptions
-import org.maplibre.android.camera.CameraUpdateFactory
 import pk.kissanmadadgar.mobile.R
 import pk.kissanmadadgar.mobile.core.components.UrduButton
 import pk.kissanmadadgar.mobile.core.components.UrduTextField
@@ -891,7 +887,7 @@ fun FeaturedMachineryCard(machinery: Machinery, onClick: () -> Unit) {
     ) {
         Column {
             androidx.compose.foundation.Image(
-                painter = androidx.compose.ui.res.painterResource(id = R.drawable.super_seeder_custom),
+                painter = androidx.compose.ui.res.painterResource(id = R.drawable.other_machinery_clean),
                 contentDescription = null,
                 modifier = Modifier.fillMaxWidth().height(160.dp),
                 contentScale = androidx.compose.ui.layout.ContentScale.Crop
@@ -1658,9 +1654,16 @@ fun FarmerMainTab(
         FullScreenMachineryMap(
             machineryList = availableList,
             userLatLng = com.google.android.gms.maps.model.LatLng(homeUserLocation.first, homeUserLocation.second),
+            isAuthorized = isAuthorized,
+            viewModel = viewModel,
             onNavigateToDetail = onNavigateToDetail,
             onNavigateToBooking = onNavigateToBooking,
-            onDismiss = { showMachineryMapFromHome = false }
+            onDismiss = { showMachineryMapFromHome = false },
+            // This request originates from panning the full-screen map itself, not the home tab's
+            // own list fetch, so it's tagged "map" rather than "home".
+            onSearchThisArea = { lat, lng ->
+                viewModel.fetchAvailableMachines(lat, lng, "map", size = 25)
+            }
         )
     }
 
@@ -1695,104 +1698,6 @@ fun FarmerMainTab(
     }
 }
 
-fun createMarkerIcon(context: android.content.Context, color: Int, isUser: Boolean): org.maplibre.android.annotations.Icon {
-    // Marker bitmaps are placed on the map at their raw pixel size (MapLibre does not
-    // auto-scale them like an ImageView would), so the size must be scaled by the device's
-    // density to read as a normal-sized pin on screen instead of a tiny dot.
-    val density = context.resources.displayMetrics.density
-    val pinWidthDp = if (isUser) 44f else 40f
-    val pinHeightDp = pinWidthDp * 1.25f
-    val pinWidth = (pinWidthDp * density)
-    val pinHeight = (pinHeightDp * density)
-    val strokeWidthPx = 3f * density
-
-    val bitmapW = pinWidth.toInt() + (strokeWidthPx * 2).toInt()
-    val bitmapH = pinHeight.toInt() + (strokeWidthPx * 2).toInt()
-    val bitmap = android.graphics.Bitmap.createBitmap(bitmapW, bitmapH, android.graphics.Bitmap.Config.ARGB_8888)
-    val canvas = android.graphics.Canvas(bitmap)
-
-    val centerX = bitmapW / 2f
-    val headRadius = pinWidth / 2f
-    val headCenterY = strokeWidthPx + headRadius
-    val tipY = bitmapH - strokeWidthPx
-
-    // Classic map-pin (teardrop) silhouette: a circular head with a pointed tail touching
-    // the exact map coordinate, which reads far better at a glance than a plain dot.
-    val pinPath = android.graphics.Path().apply {
-        addCircle(centerX, headCenterY, headRadius, android.graphics.Path.Direction.CW)
-        moveTo(centerX - headRadius * 0.55f, headCenterY + headRadius * 0.75f)
-        lineTo(centerX, tipY)
-        lineTo(centerX + headRadius * 0.55f, headCenterY + headRadius * 0.75f)
-        close()
-    }
-
-    val shadowPaint = android.graphics.Paint().apply {
-        isAntiAlias = true
-        setColor(android.graphics.Color.BLACK)
-        alpha = 45
-        maskFilter = android.graphics.BlurMaskFilter(strokeWidthPx, android.graphics.BlurMaskFilter.Blur.NORMAL)
-    }
-    canvas.drawPath(pinPath, shadowPaint)
-
-    val fillPaint = android.graphics.Paint().apply {
-        isAntiAlias = true
-        setColor(color)
-        style = android.graphics.Paint.Style.FILL
-    }
-    canvas.drawPath(pinPath, fillPaint)
-
-    val strokePaint = android.graphics.Paint().apply {
-        isAntiAlias = true
-        setColor(android.graphics.Color.WHITE)
-        style = android.graphics.Paint.Style.STROKE
-        strokeWidth = strokeWidthPx
-    }
-    canvas.drawPath(pinPath, strokePaint)
-
-    // Simple, crisp vector glyph drawn with primitives — avoids relying on emoji-font
-    // rendering, which varies in size/quality across devices and was the main reason
-    // the old markers looked inconsistent and washed out.
-    val glyphPaint = android.graphics.Paint().apply {
-        isAntiAlias = true
-        setColor(android.graphics.Color.WHITE)
-        style = android.graphics.Paint.Style.FILL
-    }
-    if (isUser) {
-        // Person glyph: head + shoulders
-        val r = headRadius * 0.28f
-        canvas.drawCircle(centerX, headCenterY - r * 1.3f, r, glyphPaint)
-        val shoulders = android.graphics.RectF(
-            centerX - r * 1.7f,
-            headCenterY + r * 0.1f,
-            centerX + r * 1.7f,
-            headCenterY + r * 1.9f
-        )
-        canvas.drawRoundRect(shoulders, r, r, glyphPaint)
-    } else {
-        // Tractor glyph: cab + body + two wheels
-        val bodyRect = android.graphics.RectF(
-            centerX - headRadius * 0.55f,
-            headCenterY - headRadius * 0.15f,
-            centerX + headRadius * 0.65f,
-            headCenterY + headRadius * 0.3f
-        )
-        canvas.drawRoundRect(bodyRect, headRadius * 0.08f, headRadius * 0.08f, glyphPaint)
-        val cabRect = android.graphics.RectF(
-            centerX - headRadius * 0.15f,
-            headCenterY - headRadius * 0.55f,
-            centerX + headRadius * 0.45f,
-            headCenterY - headRadius * 0.1f
-        )
-        canvas.drawRoundRect(cabRect, headRadius * 0.08f, headRadius * 0.08f, glyphPaint)
-        val bigWheelRadius = headRadius * 0.32f
-        canvas.drawCircle(centerX + headRadius * 0.35f, headCenterY + headRadius * 0.45f, bigWheelRadius, glyphPaint)
-        val smallWheelRadius = headRadius * 0.2f
-        canvas.drawCircle(centerX - headRadius * 0.4f, headCenterY + headRadius * 0.5f, smallWheelRadius, glyphPaint)
-    }
-
-    return org.maplibre.android.annotations.IconFactory.getInstance(context).fromBitmap(bitmap)
-}
-
 @Composable
 fun SimulatedFarmingMap(
     viewModel: MainViewModel,
@@ -1801,134 +1706,31 @@ fun SimulatedFarmingMap(
     onNavigateToBooking: ((String) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
-    var selectedPin by remember { mutableStateOf<Machinery?>(null) }
-    // Keeps track of which machinery each currently-drawn marker represents, so a marker tap
-    // can resolve to the exact machine that was tapped instead of always showing the first one.
-    val markerIdToMachinery = remember { mutableMapOf<Long, Machinery>() }
+    // Backed by the same Google Maps + clustering implementation used by the Search tab's map
+    // (see GoogleMachineryMap.kt) instead of the previous MapLibre engine — MapLibre's native
+    // library was ~11MB per CPU architecture and this app already ships Google Maps for the
+    // Search tab, so standardizing on one engine removes that entirely without adding a new
+    // dependency. gesturesEnabled=true / showControls=false matches the previous MapLibre
+    // behavior here: full pan/pinch-zoom, no on-screen +/- buttons.
     val userLocState by viewModel.userLocation.collectAsState()
-
-    val context = LocalContext.current
-    
-    val mapView = remember {
-        MapView(context).apply {
-            onCreate(null)
-        }
-    }
-    
-    // Memoize map style JSON to avoid re-creating the string on every recomposition
-    val osmStyleJson = remember {
-        """
-        {
-          "version": 8,
-          "sources": {
-            "osm-raster-tiles": {
-              "type": "raster",
-              "tiles": [
-                "https://tile.openstreetmap.org/{z}/{x}/{y}.png"
-              ],
-              "tileSize": 256,
-              "attribution": "© OpenStreetMap contributors"
-            }
-          },
-          "layers": [
-            {
-              "id": "osm-raster-layer",
-              "type": "raster",
-              "source": "osm-raster-tiles"
-            }
-          ]
-        }
-        """.trimIndent()
-    }
-    
-    // Track if map has been initialized to avoid redundant setStyle calls
-    var mapInitialized by remember { mutableStateOf(false) }
-
-    // Center the camera on the user's position exactly once. GPS updates fire every few
-    // seconds and previously re-triggered animateCamera on every one of them, yanking the
-    // viewport back to the user's location and undoing any panning/zooming — never do that.
-    var hasCenteredCamera by remember { mutableStateOf(false) }
-
-    DisposableEffect(mapView) {
-        mapView.onStart()
-        mapView.onResume()
-        onDispose {
-            mapView.onPause()
-            mapView.onStop()
-            mapView.onDestroy()
-        }
-    }
-
-    val userIcon = remember(context) { createMarkerIcon(context, 0xFF2196F3.toInt(), true) }
-    val machineryIcon = remember(context) { createMarkerIcon(context, 0xFF2E7D32.toInt(), false) }
-
-    val userLocationTitle = stringResource(id = R.string.user_location_title)
+    val userLatLng = com.google.android.gms.maps.model.LatLng(userLocState.first, userLocState.second)
+    val user by viewModel.currentUser.collectAsState()
+    val isAuthorized = user != null
 
     Box(modifier = modifier) {
-        AndroidView(
-            modifier = Modifier.fillMaxSize(),
-            factory = { mapView },
-            update = { view ->
-                view.getMapAsync { map ->
-                    if (!mapInitialized) {
-                        // Only set style once
-                        map.setStyle(org.maplibre.android.maps.Style.Builder().fromJson(osmStyleJson)) { _ ->
-                            mapInitialized = true
-                        }
-
-                        // Resolve taps to the exact marker that was pressed instead of always
-                        // showing the first machine in the list.
-                        map.setOnMarkerClickListener { marker ->
-                            val tapped = markerIdToMachinery[marker.id]
-                            if (tapped != null) {
-                                selectedPin = tapped
-                                true
-                            } else {
-                                false
-                            }
-                        }
-                    }
-
-                    // Update markers without re-setting the style
-                    val userPos = LatLng(userLocState.first, userLocState.second)
-                    if (!hasCenteredCamera) {
-                        map.animateCamera(CameraUpdateFactory.newLatLngZoom(userPos, 13.0))
-                        hasCenteredCamera = true
-                    }
-
-                    map.clear()
-                    markerIdToMachinery.clear()
-
-                    // User position (Blue Marker)
-                    map.addMarker(
-                        MarkerOptions()
-                            .position(userPos)
-                            .title(userLocationTitle)
-                            .icon(userIcon)
-                    )
-
-                    // Machinery positions (Green Marker) — uses each machine's own coordinates
-                    // as returned by the backend, falling back to the user's position only if a
-                    // machine genuinely has no coordinates yet.
-                    machineryList.forEach { machinery ->
-                        val machineryPos = LatLng(machinery.latitude, machinery.longitude)
-                        val snippetText = context.getString(R.string.hourly_rate_format, machinery.hourlyRate.toInt())
-                        val marker = map.addMarker(
-                            MarkerOptions()
-                                .position(machineryPos)
-                                .title(machinery.nameUr)
-                                .snippet(snippetText)
-                                .icon(machineryIcon)
-                        )
-                        if (marker != null) {
-                            markerIdToMachinery[marker.id] = machinery
-                        }
-                    }
-                }
-            }
+        ClusteredMachineryGoogleMap(
+            machineryList = machineryList,
+            userLatLng = userLatLng,
+            gesturesEnabled = true,
+            showControls = false,
+            isAuthorized = isAuthorized,
+            viewModel = viewModel,
+            onNavigateToDetail = onPinClicked,
+            onNavigateToBooking = onNavigateToBooking,
+            modifier = Modifier.fillMaxSize()
         )
 
-        // Floating "GPS Active" indicator
+        // Floating "GPS Active" indicator — preserved as-is from the previous implementation.
         Box(
             modifier = Modifier
                 .align(Alignment.TopEnd)
@@ -1942,132 +1744,18 @@ fun SimulatedFarmingMap(
                 Text(text = stringResource(id = R.string.gps_active_label), fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color.DarkGray)
             }
         }
-
-        // Clicked popup details
-        selectedPin?.let { pin ->
-            Card(
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .padding(10.dp)
-                    .fillMaxWidth(0.95f)
-                    .clickable { onPinClicked(pin.id) },
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = Color.White),
-                elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
-                border = BorderStroke(1.dp, Color(0xFFEEEEEE))
-            ) {
-                Column(modifier = Modifier.padding(14.dp)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.Top
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = pin.providerName,
-                                fontWeight = FontWeight.ExtraBold,
-                                fontSize = 16.sp,
-                                color = Color.Black,
-                                maxLines = 1,
-                                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
-                            )
-                            Spacer(modifier = Modifier.height(2.dp))
-                            Text(
-                                text = pin.nameUr,
-                                fontWeight = FontWeight.Medium,
-                                fontSize = 14.sp,
-                                color = AgriGreenPrimary
-                            )
-                        }
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(imageVector = Icons.Default.Star, contentDescription = null, tint = Color(0xFFFFB300), modifier = Modifier.size(16.dp))
-                            Spacer(modifier = Modifier.width(2.dp))
-                            Text(text = pin.rating.toString(), fontWeight = FontWeight.Bold, fontSize = 13.sp, color = Color.DarkGray)
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(imageVector = Icons.Default.Phone, contentDescription = null, tint = Color.DarkGray, modifier = Modifier.size(15.dp))
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(text = pin.providerPhone, fontSize = 13.sp, color = Color.DarkGray)
-                        pin.distanceText?.let { distance ->
-                            Spacer(modifier = Modifier.width(10.dp))
-                            Icon(imageVector = Icons.Default.LocationOn, contentDescription = null, tint = Color.DarkGray, modifier = Modifier.size(15.dp))
-                            Spacer(modifier = Modifier.width(2.dp))
-                            Text(
-                                text = stringResource(id = R.string.distance_km_format, distance),
-                                fontSize = 13.sp,
-                                color = Color.DarkGray
-                            )
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(10.dp))
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Button(
-                            onClick = { onNavigateToBooking?.invoke(pin.id) },
-                            colors = ButtonDefaults.buttonColors(containerColor = AgriGreenPrimary),
-                            shape = RoundedCornerShape(18.dp),
-                            contentPadding = PaddingValues(vertical = 8.dp),
-                            modifier = Modifier.weight(1f).height(40.dp)
-                        ) {
-                            Text(
-                                text = stringResource(id = R.string.btn_book),
-                                color = Color.White,
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 14.sp
-                            )
-                        }
-
-                        Box(
-                            modifier = Modifier
-                                .size(40.dp)
-                                .clip(CircleShape)
-                                .background(AgriGreenPrimary)
-                                .clickable {
-                                    val intent = android.content.Intent(android.content.Intent.ACTION_DIAL).apply {
-                                        data = android.net.Uri.parse("tel:${pin.providerPhone}")
-                                    }
-                                    context.startActivity(intent)
-                                },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(imageVector = Icons.Default.Phone, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
-                        }
-                    }
-                }
-            }
-        }
     }
 }
 
 
 
 
-private fun defaultMachineryImages(nameUr: String): List<String> {
-    val name = nameUr.lowercase()
-    return when {
-        name.contains("بیلر") || name.contains("baler") || name.contains("bailer") ->
-            listOf("bailer", "baler_front", "baler_rear", "baler_side")
-        name.contains("ہارویسٹر") || name.contains("harvester") ->
-            listOf("harvester", "harvester_front", "harvester_rear", "harvester_side")
-        else -> listOf("seeder_main_1", "seeder_main_2", "seeder_main_3", "seeder_main_4")
-    }
+private fun defaultMachineryImages(): List<String> {
+    return listOf("other_machinery_clean")
 }
 
-private fun defaultMachineryImageRes(nameUr: String): Int {
-    val name = nameUr.lowercase()
-    return when {
-        name.contains("بیلر") || name.contains("baler") || name.contains("bailer") -> R.drawable.bailer
-        name.contains("ہارویسٹر") || name.contains("harvester") -> R.drawable.harvester
-        else -> R.drawable.super_seeder_custom
-    }
+private fun defaultMachineryImageRes(): Int {
+    return R.drawable.other_machinery_clean
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -2101,7 +1789,7 @@ fun MachineryDetailScreen(
 
     val displayImages = remember(item?.imageUrls, item?.nameUr) {
         if (item == null || item.imageUrls.isEmpty()) {
-            defaultMachineryImages(item?.nameUr.orEmpty())
+            defaultMachineryImages()
         } else {
             item.imageUrls
         }
@@ -2155,18 +1843,44 @@ fun MachineryDetailScreen(
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             itemsIndexed(displayImages) { index, imageName ->
-                                val resId = context.resources.getIdentifier(imageName, "drawable", context.packageName)
-                                val finalResId = if (resId != 0) resId else defaultMachineryImageRes(item.nameUr)
-                                androidx.compose.foundation.Image(
-                                    painter = androidx.compose.ui.res.painterResource(id = finalResId),
-                                    contentDescription = null,
-                                    modifier = Modifier
-                                        .width(300.dp)
-                                        .height(220.dp)
-                                        .clip(RoundedCornerShape(16.dp))
-                                        .clickable { zoomedImageIndex = index },
-                                    contentScale = androidx.compose.ui.layout.ContentScale.Crop
-                                )
+                                val imageModifier = Modifier
+                                    .width(300.dp)
+                                    .height(220.dp)
+                                    .clip(RoundedCornerShape(16.dp))
+                                    .clickable { zoomedImageIndex = index }
+                                if (imageName.startsWith("http")) {
+                                    coil.compose.SubcomposeAsyncImage(
+                                        model = imageName,
+                                        loading = {
+                                            Box(
+                                                modifier = Modifier.fillMaxSize(),
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                CircularProgressIndicator(color = AgriGreenPrimary, modifier = Modifier.size(24.dp))
+                                            }
+                                        },
+                                        error = {
+                                            androidx.compose.foundation.Image(
+                                                painter = androidx.compose.ui.res.painterResource(id = defaultMachineryImageRes()),
+                                                contentDescription = null,
+                                                modifier = Modifier.fillMaxSize(),
+                                                contentScale = androidx.compose.ui.layout.ContentScale.Crop
+                                            )
+                                        },
+                                        contentDescription = null,
+                                        modifier = imageModifier,
+                                        contentScale = androidx.compose.ui.layout.ContentScale.Crop
+                                    )
+                                } else {
+                                    val resId = context.resources.getIdentifier(imageName, "drawable", context.packageName)
+                                    val finalResId = if (resId != 0) resId else defaultMachineryImageRes()
+                                    androidx.compose.foundation.Image(
+                                        painter = androidx.compose.ui.res.painterResource(id = finalResId),
+                                        contentDescription = null,
+                                        modifier = imageModifier,
+                                        contentScale = androidx.compose.ui.layout.ContentScale.Crop
+                                    )
+                                }
                             }
                         }
                         
@@ -2851,7 +2565,7 @@ fun FullScreenImageViewer(
                 val imageName = imageNames[page]
                 val context = LocalContext.current
                 val resId = context.resources.getIdentifier(imageName, "drawable", context.packageName)
-                val finalResId = if (resId != 0) resId else R.drawable.super_seeder_custom
+                val finalResId = if (resId != 0) resId else R.drawable.other_machinery_clean
 
                 val scale = scales[page] ?: 1f
                 val offset = offsets[page] ?: Offset.Zero
@@ -2923,7 +2637,7 @@ fun FullScreenImageViewer(
                                 },
                                 error = {
                                     androidx.compose.foundation.Image(
-                                        painter = androidx.compose.ui.res.painterResource(id = R.drawable.super_seeder_custom),
+                                        painter = androidx.compose.ui.res.painterResource(id = R.drawable.other_machinery_clean),
                                         contentDescription = null,
                                         modifier = Modifier.fillMaxSize(),
                                         contentScale = androidx.compose.ui.layout.ContentScale.Fit

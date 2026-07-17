@@ -11,14 +11,19 @@ import android.location.Location
 import android.location.LocationListener
 import android.location.LocationManager
 import android.os.Bundle
+import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.LayoutDirection
@@ -30,14 +35,29 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.google.android.play.core.install.model.AppUpdateType
 import dagger.hilt.android.AndroidEntryPoint
+import pk.kissanmadadgar.mobile.core.components.UpdateReadyDialog
 import pk.kissanmadadgar.mobile.core.navigation.Screen
+import pk.kissanmadadgar.mobile.core.strings.RemoteStringsContextWrapper
 import pk.kissanmadadgar.mobile.core.theme.KissanMadadgarTheme
+import pk.kissanmadadgar.mobile.core.update.InAppUpdateManager
+import pk.kissanmadadgar.mobile.core.update.UpdateState
 import pk.kissanmadadgar.mobile.presentation.MainViewModel
 import pk.kissanmadadgar.mobile.presentation.screens.*
+import javax.inject.Inject
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+    @Inject lateinit var inAppUpdateManager: InAppUpdateManager
+
+    private val updateResultLauncher =
+        registerForActivityResult(ActivityResultContracts.StartIntentSenderForResult()) { result ->
+            if (result.resultCode != RESULT_OK) {
+                Log.e("InAppUpdate", "Update flow did not complete, resultCode=${result.resultCode}")
+            }
+        }
+
     private lateinit var sensorManager: SensorManager
     private lateinit var locationManager: LocationManager
     private var accelerometer: Sensor? = null
@@ -114,12 +134,19 @@ class MainActivity : ComponentActivity() {
         accelerometer?.let { sensorManager.registerListener(sensorListener, it, SensorManager.SENSOR_DELAY_UI) }
         gyroscope?.let { sensorManager.registerListener(sensorListener, it, SensorManager.SENSOR_DELAY_UI) }
         startLocationUpdates()
+        inAppUpdateManager.registerListener()
+        inAppUpdateManager.checkForUpdate()
     }
 
     override fun onPause() {
         super.onPause()
         sensorManager.unregisterListener(sensorListener)
         locationManager.removeUpdates(locationListener)
+        inAppUpdateManager.unregisterListener()
+    }
+
+    override fun attachBaseContext(newBase: Context) {
+        super.attachBaseContext(RemoteStringsContextWrapper.wrap(newBase))
     }
 
     override fun onNewIntent(intent: android.content.Intent) {
@@ -156,6 +183,8 @@ class MainActivity : ComponentActivity() {
             ActivityCompat.requestPermissions(this, permissionsToRequest.toTypedArray(), 100)
         }
 
+        inAppUpdateManager.checkForUpdate()
+
         setContent {
             KissanMadadgarTheme {
                 CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
@@ -163,9 +192,27 @@ class MainActivity : ComponentActivity() {
                         modifier = Modifier.fillMaxSize(),
                         color = MaterialTheme.colorScheme.background
                     ) {
+                      Box(modifier = Modifier.fillMaxSize()) {
                         val navController = rememberNavController()
                         val viewModel: MainViewModel = hiltViewModel()
                         sharedViewModel = viewModel
+
+                        val updateState by inAppUpdateManager.state.collectAsState()
+                        LaunchedEffect(updateState) {
+                            when (val current = updateState) {
+                                is UpdateState.ImmediateAvailable ->
+                                    inAppUpdateManager.startUpdateFlow(current.updateInfo, AppUpdateType.IMMEDIATE, updateResultLauncher)
+                                is UpdateState.FlexibleAvailable ->
+                                    inAppUpdateManager.startUpdateFlow(current.updateInfo, AppUpdateType.FLEXIBLE, updateResultLauncher)
+                                else -> Unit
+                            }
+                        }
+                        if (updateState is UpdateState.FlexibleDownloaded) {
+                            UpdateReadyDialog(
+                                onConfirm = { inAppUpdateManager.completeFlexibleUpdate() },
+                                onDismiss = {}
+                            )
+                        }
 
                         LaunchedEffect(intent) {
                             intent.getStringExtra("navigate_booking_id")?.let { bId ->
@@ -385,6 +432,7 @@ class MainActivity : ComponentActivity() {
 
 
                         }
+                      }
                     }
                 }
             }

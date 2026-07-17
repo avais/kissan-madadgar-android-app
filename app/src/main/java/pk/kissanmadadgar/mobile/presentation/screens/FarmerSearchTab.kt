@@ -66,12 +66,10 @@ fun MachineryListItem(
         )
     }
 
+    // No real photos for this machine: show the same generic fallback image used below when an
+    // individual photo fails to load, instead of a fixed set of a specific machine's photos.
     val displayImages = remember(machinery.imageUrls) {
-        if (machinery.imageUrls.isEmpty()) {
-            listOf("seeder_main_1", "seeder_main_2", "seeder_main_3", "seeder_main_4")
-        } else {
-            machinery.imageUrls
-        }
+        machinery.imageUrls.ifEmpty { listOf("other_machinery_clean") }
     }
 
     zoomedImageIndex?.let { index ->
@@ -131,7 +129,7 @@ fun MachineryListItem(
                                 },
                                 error = {
                                     Image(
-                                        painter = painterResource(id = R.drawable.super_seeder_custom),
+                                        painter = painterResource(id = R.drawable.other_machinery_clean),
                                         contentDescription = null,
                                         modifier = Modifier.fillMaxSize(),
                                         contentScale = ContentScale.Crop
@@ -146,7 +144,7 @@ fun MachineryListItem(
                             )
                         } else {
                             val resId = context.resources.getIdentifier(imageName, "drawable", context.packageName)
-                            val finalResId = if (resId != 0) resId else R.drawable.super_seeder_custom
+                            val finalResId = if (resId != 0) resId else R.drawable.other_machinery_clean
                             Image(
                                 painter = painterResource(id = finalResId),
                                 contentDescription = null,
@@ -659,9 +657,28 @@ fun FarmerSearchTab(
         FullScreenMachineryMap(
             machineryList = availableList,
             userLatLng = com.google.android.gms.maps.model.LatLng(userLocation.first, userLocation.second),
+            isAuthorized = isAuthorized,
+            viewModel = viewModel,
             onNavigateToDetail = onNavigateToDetail,
             onNavigateToBooking = onNavigateToBooking,
-            onDismiss = { isMapFullScreen = false }
+            onDismiss = { isMapFullScreen = false },
+            // Re-runs the same server search the debounced keyword/district effect above uses,
+            // just centered on wherever the user panned to instead of the device's GPS position.
+            // Tagged "map" (not "search") since this request originates from panning the map
+            // itself, not the tab's own keyword/district search box.
+            onSearchThisArea = { lat, lng ->
+                viewModel.fetchAvailableMachines(
+                    lat,
+                    lng,
+                    "map",
+                    districtId = selectedDistrict?.id,
+                    keyword = query.trim().ifEmpty { null },
+                    // The area-search chip only enables at zoom >= 10 (see MIN_AREA_SEARCH_ZOOM in
+                    // GoogleMachineryMap.kt), so the visible radius is already small enough that
+                    // ~25 nearest results reliably covers it without a heavy per-tap payload.
+                    size = 25
+                )
+            }
         )
     }
 }

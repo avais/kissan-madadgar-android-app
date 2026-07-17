@@ -22,7 +22,6 @@ import pk.kissanmadadgar.mobile.data.remote.api.AndroidNotificationDto
 import pk.kissanmadadgar.mobile.data.remote.dto.GovernmentProjectDto
 import javax.inject.Inject
 import kotlin.coroutines.resume
-import pk.kissanmadadgar.mobile.data.local.InMemoryAuthRepository
 
 @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
 @HiltViewModel
@@ -53,6 +52,13 @@ class MainViewModel @Inject constructor(
     val selectedTab = _selectedTab.asStateFlow()
 
     init {
+        // Refreshes the backend-driven string catalog at most once every 24h (no-op otherwise);
+        // any failure is swallowed inside the store so this never blocks or affects app startup.
+        viewModelScope.launch {
+            pk.kissanmadadgar.mobile.core.strings.RemoteStringsStore.getInstance(context)
+                .refreshIfNeeded(authApiService)
+        }
+
         pk.kissanmadadgar.mobile.data.remote.FarmingUploadSyncManager.getInstance(
             apiService = authApiService,
             sessionManager = sessionManager,
@@ -281,6 +287,21 @@ class MainViewModel @Inject constructor(
                 bookingRepo.upsertBookings(listOf(updated))
             }
 
+            // Must be read before the upload runs (it clears the active session file on success)
+            // — same elapsed-active-seconds formula the live timer on the booking card uses
+            // (paused duration excluded either way).
+            val session = pk.kissanmadadgar.mobile.data.local.FarmingTrackingService.getActiveSession(context)
+            val totalServiceTime = if (session != null) {
+                val pausedMs = if (session.isPaused) {
+                    session.pausedDurationMs + (System.currentTimeMillis() - session.lastPauseTimeMs)
+                } else {
+                    session.pausedDurationMs
+                }
+                ((System.currentTimeMillis() - session.startTimeMs - pausedMs) / 1000L).coerceAtLeast(0L)
+            } else {
+                0L
+            }
+
             _isSubmittingFarmingAction.value = true
             val outcome = try {
                 manager.submitOrQueue(
@@ -295,6 +316,7 @@ class MainViewModel @Inject constructor(
                     altitude = altitude,
                     isMock = isMock,
                     deviceId = deviceId,
+                    totalServiceTime = totalServiceTime,
                     onQueuedSyncSuccess = {
                         fetchRentalBookings("ONGOING")
                         fetchRentalBookings("PENDING")
@@ -582,17 +604,11 @@ class MainViewModel @Inject constructor(
             val userId = sessionManager.getUserId()
             if (role != null && userId != null) {
                 _selectedRole.value = role
-                // Fetch mock details
                 val name = sessionManager.getUserName() ?: context.getString(R.string.default_user_name)
-                val phone = sessionManager.getUserPhone() ?: sessionManager.getAuthToken() ?: "03000000000"
+                val phone = sessionManager.getUserPhone() ?: sessionManager.getAuthToken() ?: ""
                 val user = User(userId, phone, name, role, null, true)
                 _currentUser.value = user
-                
-                // If it's a provider/farmer, sync repository values
-                if (authRepo is InMemoryAuthRepository) {
-                    authRepo.setCurrentUser(user)
-                }
-                
+
                 loadRoleSpecificData(userId, role)
                 fetchSupportInfo() // Fetch again once we have a real token
             } else {
@@ -650,13 +666,13 @@ class MainViewModel @Inject constructor(
                             "REJECTED" -> MachineryStatus.REJECTED
                             else -> MachineryStatus.PENDING
                         }
-                        val nameUrdu = dto.machineName ?: "پیاز ہارویسٹر"
-                        val ratingDouble = dto.rating?.toDoubleOrNull() ?: 5.0
+                        val nameUrdu = dto.machineName ?: ""
+                        val ratingDouble = dto.rating?.toDoubleOrNull() ?: 0.0
                         val acresDouble = dto.acres?.toDoubleOrNull() ?: 0.0
                         Machinery(
                             id = dto.id?.toString() ?: "machine_my",
                             providerId = _currentUser.value?.id ?: "provider_me",
-                            providerName = _currentUser.value?.fullName ?: "سروس فراہم کنندہ",
+                            providerName = _currentUser.value?.fullName ?: "",
                             providerPhone = _currentUser.value?.phoneNumber ?: "",
                             categoryId = "CAT_1",
                             nameUr = nameUrdu,
@@ -671,7 +687,7 @@ class MainViewModel @Inject constructor(
                             rating = ratingDouble,
                             acresDone = acresDouble,
                             distanceCoveredKm = 0.0,
-                            districtUr = dto.district ?: "ٹوبہ ٹیک سنگھ",
+                            districtUr = dto.district ?: "",
                             projectName = dto.project?.projectName,
                             projectLogo = dto.project?.logo,
                             subsidyText = dto.project?.subsidy,
@@ -763,9 +779,6 @@ class MainViewModel @Inject constructor(
                     sessionManager.saveUserId(updatedProvider.id)
                     sessionManager.saveUserName(updatedProvider.fullName)
                     sessionManager.saveUserPhone(updatedProvider.phoneNumber)
-                    if (authRepo is InMemoryAuthRepository) {
-                        authRepo.setCurrentUser(updatedProvider)
-                    }
                     loadRoleSpecificData(updatedProvider.id, UserRole.PROVIDER)
                     syncPushToken()
                     onSuccess()
@@ -808,65 +821,6 @@ class MainViewModel @Inject constructor(
         }
     }
 
-    fun registerFarmer(phone: String, name: String, address: String, onSuccess: () -> Unit, onError: (String) -> Unit) {
-        viewModelScope.launch {
-            authRepo.registerFarmer(phone, name, address)
-                .onSuccess { user ->
-                    _currentUser.value = user
-                    sessionManager.saveUserId(user.id)
-                    sessionManager.saveUserName(user.fullName)
-                    sessionManager.saveUserPhone(user.phoneNumber)
-                    _userAddress.value = address
-                    fetchSupportInfo()
-                    loadRoleSpecificData(user.id, UserRole.FARMER)
-                    syncPushToken()
-                    onSuccess()
-                }
-                .onFailure {
-                    onError(it.localizedMessage ?: context.getString(R.string.err_registration_failed))
-                }
-        }
-    }
-
-    fun verifySupplierCnic(cnic: String, onSuccess: (User) -> Unit, onError: (String) -> Unit) {
-        viewModelScope.launch {
-            authRepo.verifySupplierCnic(cnic)
-                .onSuccess { user ->
-                    _selectedRole.value = UserRole.PROVIDER
-                    _currentUser.value = user
-                    sessionManager.saveUserRole(UserRole.PROVIDER)
-                    sessionManager.saveUserId(user.id)
-                    sessionManager.saveUserName(user.fullName)
-                    sessionManager.saveUserPhone(user.phoneNumber)
-                    _userCnic.value = cnic
-                    fetchSupportInfo()
-                    loadRoleSpecificData(user.id, UserRole.PROVIDER)
-                    syncPushToken()
-                    onSuccess(user)
-                }
-                .onFailure {
-                    onError(it.localizedMessage ?: "شناختی کارڈ کی تصدیق ناکام ہو گئی۔")
-                }
-        }
-    }
-
-    fun adminLogin(email: String, pass: String, onSuccess: () -> Unit, onError: (String) -> Unit) {
-        viewModelScope.launch {
-            authRepo.adminLogin(email, pass)
-                .onSuccess { user ->
-                    _currentUser.value = user
-                    sessionManager.saveUserId(user.id)
-                    sessionManager.saveUserName(user.fullName)
-                    sessionManager.saveAuthToken(email)
-                    fetchSupportInfo()
-                    onSuccess()
-                }
-                .onFailure {
-                    onError(it.localizedMessage ?: context.getString(R.string.err_invalid_credentials))
-                }
-        }
-    }
-
     fun updateCurrentUserName(newName: String) {
         viewModelScope.launch {
             val current = _currentUser.value
@@ -874,9 +828,6 @@ class MainViewModel @Inject constructor(
                 val updated = current.copy(fullName = newName)
                 _currentUser.value = updated
                 sessionManager.saveUserName(newName)
-                if (authRepo is InMemoryAuthRepository) {
-                    authRepo.setCurrentUser(updated)
-                }
             }
         }
     }
@@ -897,9 +848,6 @@ class MainViewModel @Inject constructor(
                 val currentToken = sessionManager.getAuthToken()
                 if (currentToken.isNullOrEmpty() || currentToken == current.phoneNumber || !currentToken.contains(".")) {
                     sessionManager.saveAuthToken(formattedPhone)
-                }
-                if (authRepo is InMemoryAuthRepository) {
-                    authRepo.setCurrentUser(updated)
                 }
             }
         }
@@ -975,9 +923,6 @@ class MainViewModel @Inject constructor(
                 _currentUser.value = updated
                 _selectedRole.value = UserRole.PROVIDER
                 sessionManager.saveUserRole(UserRole.PROVIDER)
-                if (authRepo is InMemoryAuthRepository) {
-                    authRepo.setCurrentUser(updated)
-                }
             }
             onComplete()
         }
@@ -991,9 +936,6 @@ class MainViewModel @Inject constructor(
                 _currentUser.value = updated
                 _selectedRole.value = UserRole.FARMER
                 sessionManager.saveUserRole(UserRole.FARMER)
-                if (authRepo is InMemoryAuthRepository) {
-                    authRepo.setCurrentUser(updated)
-                }
             }
             onComplete()
         }
@@ -1085,6 +1027,7 @@ class MainViewModel @Inject constructor(
         _bookingsIsLast.value = true
         _bookingsIsFirst.value = true
         notificationBookingId.value = null
+        _unreadNotificationCount.value = 0L
 
         // The Room-backed cache is already scoped per account (see BookingRepositoryImpl),
         // so a subsequent login — same or different account — only ever reads/writes rows
@@ -1143,10 +1086,11 @@ class MainViewModel @Inject constructor(
 
     fun fetchGuestToken(onComplete: () -> Unit = {}) {
         viewModelScope.launch {
+            val deviceId = android.provider.Settings.Secure.getString(context.contentResolver, android.provider.Settings.Secure.ANDROID_ID) ?: "android_device"
             val request = pk.kissanmadadgar.mobile.data.remote.dto.GuestTokenRequest(
-                deviceId = pk.kissanmadadgar.mobile.core.AppConfig.DEVICE_ID,
-                appVersion = pk.kissanmadadgar.mobile.core.AppConfig.APP_VERSION,
-                signature = pk.kissanmadadgar.mobile.core.AppConfig.SIGNATURE
+                deviceId = deviceId,
+                appVersion = pk.kissanmadadgar.mobile.BuildConfig.VERSION_NAME,
+                signature = getAppSignatureHash(context)
             )
             authRepo.getGuestToken(request)
                 .onSuccess { response ->
@@ -1453,7 +1397,7 @@ class MainViewModel @Inject constructor(
                                 isAvailable = true,
                                 status = MachineryStatus.APPROVED, // Approved directly for farmer convenience demo
                                 imageUrls = when (machineType) {
-                                    "سپرسیڈر", "Super Seeder" -> listOf("seeder_main_1", "seeder_main_2", "seeder_main_3", "seeder_main_4")
+                                    "سپرسیڈر", "Super Seeder" -> listOf("other_machinery_clean")
                                     else -> emptyList()
                                 },
                                 rating = 5.0,
@@ -1477,10 +1421,7 @@ class MainViewModel @Inject constructor(
                         sessionManager.saveUserPhone(phoneNumber)
                         sessionManager.saveUserAddress(district)
                         sessionManager.saveUserCnic(cnic)
-                        
-                        if (authRepo is InMemoryAuthRepository) {
-                            authRepo.setCurrentUser(providerUser)
-                        }
+
                         fetchProviderMachinery()
                     }
 
@@ -1601,6 +1542,42 @@ class MainViewModel @Inject constructor(
     fun authorizeContact() {
         _isContactAuthorized.value = true
         sessionManager.setContactAuthorized(true)
+    }
+}
+
+// SHA-256 hash of the APK's signing certificate, so the backend can verify a guest-token
+// request really came from a build signed with this app's key rather than trusting a static
+// string. Falls back to an empty signature only if PackageManager genuinely can't resolve the
+// signing info (should not happen for an installed, signed APK).
+private fun getAppSignatureHash(context: Context): String {
+    return try {
+        val packageManager = context.packageManager
+        val signatureBytes = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
+            val packageInfo = packageManager.getPackageInfo(
+                context.packageName,
+                android.content.pm.PackageManager.GET_SIGNING_CERTIFICATES
+            )
+            val signingInfo = packageInfo.signingInfo
+            val signers = if (signingInfo?.hasMultipleSigners() == true) {
+                signingInfo.apkContentsSigners
+            } else {
+                signingInfo?.signingCertificateHistory
+            }
+            signers?.firstOrNull()?.toByteArray()
+        } else {
+            @Suppress("DEPRECATION")
+            val packageInfo = packageManager.getPackageInfo(
+                context.packageName,
+                android.content.pm.PackageManager.GET_SIGNATURES
+            )
+            @Suppress("DEPRECATION")
+            packageInfo.signatures?.firstOrNull()?.toByteArray()
+        } ?: return ""
+        val digest = java.security.MessageDigest.getInstance("SHA-256").digest(signatureBytes)
+        digest.joinToString("") { "%02x".format(it) }
+    } catch (e: Exception) {
+        android.util.Log.e("MainViewModel", "Failed to compute app signature hash", e)
+        ""
     }
 }
 

@@ -429,7 +429,7 @@ fun RegisterAgriculturalMachineryScreen(
                                     ) {
                                         val item1 = first3Implements.getOrNull(0)
                                         val name1 = item1?.nameUr ?: stringResource(id = R.string.machine_super_seeder)
-                                        val fallback1 = R.drawable.super_seeder_custom
+                                        val fallback1 = R.drawable.other_machinery_clean
                                         val imgUrl1 = sanitizeImageUrl(item1?.picture1)
                                         val urls1 = listOf(
                                             sanitizeImageUrl(item1?.picture1),
@@ -450,7 +450,7 @@ fun RegisterAgriculturalMachineryScreen(
 
                                         val item2 = first3Implements.getOrNull(1)
                                         val name2 = item2?.nameUr ?: stringResource(id = R.string.machine_baler)
-                                        val fallback2 = R.drawable.bailer
+                                        val fallback2 = R.drawable.other_machinery_clean
                                         val imgUrl2 = sanitizeImageUrl(item2?.picture1)
                                         val urls2 = listOf(
                                             sanitizeImageUrl(item2?.picture1),
@@ -476,7 +476,7 @@ fun RegisterAgriculturalMachineryScreen(
                                     ) {
                                         val item3 = first3Implements.getOrNull(2)
                                         val name3 = item3?.nameUr ?: stringResource(id = R.string.machine_harvester)
-                                        val fallback3 = R.drawable.harvester
+                                        val fallback3 = R.drawable.other_machinery_clean
                                         val imgUrl3 = sanitizeImageUrl(item3?.picture1)
                                         val urls3 = listOf(
                                             sanitizeImageUrl(item3?.picture1),
@@ -1328,7 +1328,7 @@ fun RegisterAgriculturalMachineryScreen(
                                              
                                              viewModel.registerFarmerMachinery(
                                                  machineQuantities = finalMachineQuantities,
-                                                 district = selectedDistrict ?: "سرگودھا",
+                                                 district = selectedDistrict ?: "",
                                                  phoneNumber = phoneNumber,
                                                  cnic = cnic,
                                                  fullName = fullName,

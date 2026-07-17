@@ -448,7 +448,7 @@ fun ProviderInventoryTab(
 private fun ProviderMachineryCard(item: Machinery) {
     val context = LocalContext.current
     val imageNames = remember(item.imageUrls) {
-        item.imageUrls.ifEmpty { listOf("super_seeder_custom") }
+        item.imageUrls.ifEmpty { listOf("other_machinery_clean") }
     }
     val (statusText, color) = when (item.status) {
         MachineryStatus.PENDING -> stringResource(id = R.string.provider_status_pending) to Color(0xFFF57C00)
@@ -497,7 +497,7 @@ private fun ProviderMachineryCard(item: Machinery) {
                             },
                             error = {
                                 androidx.compose.foundation.Image(
-                                    painter = painterResource(id = R.drawable.super_seeder_custom),
+                                    painter = painterResource(id = R.drawable.other_machinery_clean),
                                     contentDescription = item.nameUr,
                                     contentScale = ContentScale.Crop,
                                     modifier = Modifier
@@ -515,7 +515,7 @@ private fun ProviderMachineryCard(item: Machinery) {
                         )
                     } else {
                         val imageResId = context.resources.getIdentifier(imageName, "drawable", context.packageName)
-                            .takeIf { it != 0 } ?: R.drawable.super_seeder_custom
+                            .takeIf { it != 0 } ?: R.drawable.other_machinery_clean
 
                         Image(
                             painter = painterResource(id = imageResId),

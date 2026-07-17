@@ -31,6 +31,7 @@ import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.LayoutDirection
@@ -346,6 +347,27 @@ fun AgriConfirmationDialog(
                 }
             }
         }
+    }
+}
+
+@Composable
+fun UpdateReadyDialog(
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    AgriConfirmationDialog(
+        title = stringResource(id = pk.kissanmadadgar.mobile.R.string.update_ready_title),
+        onDismissRequest = onDismiss,
+        confirmButtonText = stringResource(id = pk.kissanmadadgar.mobile.R.string.update_ready_confirm_btn),
+        onConfirm = onConfirm,
+        dismissButtonText = stringResource(id = pk.kissanmadadgar.mobile.R.string.update_ready_dismiss_btn)
+    ) {
+        Text(
+            text = stringResource(id = pk.kissanmadadgar.mobile.R.string.update_ready_message),
+            fontSize = 16.sp,
+            lineHeight = 24.sp,
+            color = Color.DarkGray
+        )
     }
 }
 

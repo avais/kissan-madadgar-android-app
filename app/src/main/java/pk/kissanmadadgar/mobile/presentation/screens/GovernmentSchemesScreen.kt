@@ -165,7 +165,7 @@ private fun SchemeCard(
                         },
                         error = {
                             Image(
-                                painter = painterResource(id = R.drawable.super_seeder_custom),
+                                painter = painterResource(id = R.drawable.other_machinery_clean),
                                 contentDescription = null,
                                 modifier = Modifier.fillMaxSize(),
                                 contentScale = ContentScale.Crop
@@ -319,7 +319,7 @@ private fun SchemeCard(
                                 },
                                 error = {
                                     Image(
-                                        painter = painterResource(id = R.drawable.super_seeder_custom),
+                                        painter = painterResource(id = R.drawable.other_machinery_clean),
                                         contentDescription = null,
                                         modifier = Modifier
                                             .size(100.dp)

@@ -1,7 +1,6 @@
 package pk.kissanmadadgar.mobile.data.repository
 
 import pk.kissanmadadgar.mobile.core.security.SessionManager
-import pk.kissanmadadgar.mobile.data.local.InMemoryAuthRepository
 import pk.kissanmadadgar.mobile.data.remote.api.AuthApiService
 import pk.kissanmadadgar.mobile.data.remote.dto.OtpRequestDto
 import pk.kissanmadadgar.mobile.data.remote.dto.VerifyOtpRequestDto
@@ -40,9 +39,6 @@ class AuthRepositoryImpl @Inject constructor(
     @ApplicationContext private val context: Context
 ) : AuthRepository {
 
-    // Delegate to keep in-memory mock functionalities working for endpoints not yet created in backend
-    private val mockDelegate = InMemoryAuthRepository()
-
     override suspend fun login(phone: String, cnic: String?, latitude: Double, longitude: Double): Result<String> {
         val result = safeApiCall {
             authApiService.sendOtp(OtpRequestDto(phone, cnic, latitude, longitude))
@@ -50,18 +46,6 @@ class AuthRepositoryImpl @Inject constructor(
         return result.map { responseDto ->
             responseDto.message ?: "او ٹی پی کامیابی کے ساتھ بھیج دیا گیا ہے۔"
         }
-    }
-
-    override suspend fun verifySupplierCnic(cnic: String): Result<User> {
-        val result = mockDelegate.verifySupplierCnic(cnic)
-        result.onSuccess { user ->
-            mockDelegate.setCurrentUser(user)
-            sessionManager.saveUserId(user.id)
-            sessionManager.saveUserName(user.fullName)
-            sessionManager.saveUserPhone(user.phoneNumber)
-            sessionManager.saveUserCnic(cnic)
-        }
-        return result
     }
 
     override suspend fun verifyOtp(phoneNumber: String, otp: String, role: UserRole, guestToken: String?, type: String?): Result<User> {
@@ -86,8 +70,7 @@ class AuthRepositoryImpl @Inject constructor(
             }
             val id = responseDto.userId?.toString() ?: responseDto.username ?: responseDto.cnic ?: responseDto.phone ?: ""
             val name = responseDto.firstName.orEmpty().trim()
-                .ifEmpty { if (mappedRole == UserRole.FARMER) "کسان دوست" else "سروس پرووائیڈر" }
-            
+
             val user = User(
                 id = id,
                 phoneNumber = responseDto.phone ?: responseDto.mobileNumber ?: formattedPhone,
@@ -106,38 +89,9 @@ class AuthRepositoryImpl @Inject constructor(
             responseDto.cnic?.let { sessionManager.saveUserCnic(it) }
             responseDto.address?.let { sessionManager.saveUserAddress(it) }
             responseDto.districtName?.let { sessionManager.saveUserDistrict(it) }
-            
-            mockDelegate.setCurrentUser(user)
-            
+
             user
         }
-    }
-
-    override suspend fun registerFarmer(phoneNumber: String, fullName: String, address: String): Result<User> {
-        val result = mockDelegate.registerFarmer(phoneNumber, fullName, address)
-        result.onSuccess { user ->
-            mockDelegate.setCurrentUser(user)
-            sessionManager.saveUserId(user.id)
-            sessionManager.saveUserName(user.fullName)
-            sessionManager.saveUserPhone(user.phoneNumber)
-            sessionManager.saveUserAddress(address)
-        }
-        return result
-    }
-
-    override suspend fun adminLogin(email: String, pass: String): Result<User> {
-        val result = mockDelegate.adminLogin(email, pass)
-        result.onSuccess { user ->
-            mockDelegate.setCurrentUser(user)
-            sessionManager.saveUserId(user.id)
-            sessionManager.saveUserName(user.fullName)
-            sessionManager.saveAuthToken(email)
-        }
-        return result
-    }
-
-    override suspend fun getCurrentUser(): User? {
-        return mockDelegate.getCurrentUser()
     }
 
     override suspend fun logout(): Result<Unit> {
@@ -149,7 +103,7 @@ class AuthRepositoryImpl @Inject constructor(
         } catch (e: Exception) {
             android.util.Log.e("AuthRepositoryImpl", "Failed to clear cache on logout", e)
         }
-        return mockDelegate.logout()
+        return Result.success(Unit)
     }
 
     override suspend fun getImplements(): Result<List<ImplementDto>> {
@@ -215,16 +169,16 @@ class AuthRepositoryImpl @Inject constructor(
             val list = responseDto.content ?: emptyList()
             val machines = list.mapIndexed { index, dto ->
                 val picUrls = dto.machinePictures ?: emptyList()
-                val parsedRating = dto.rating?.toDoubleOrNull() ?: 4.9
-                val nameUrdu = dto.machineName ?: dto.machineNameAlt ?: "سپر سیڈر"
+                val parsedRating = dto.rating?.toDoubleOrNull() ?: 0.0
+                val nameUrdu = dto.machineName ?: dto.machineNameAlt ?: ""
                 Machinery(
                     id = "machine_${page}_$index",
                     providerId = "provider_${page}_$index",
-                    providerName = dto.farmerName ?: "معزز کاشتکار",
-                    providerPhone = dto.mobile ?: "03000000000",
+                    providerName = dto.farmerName ?: "",
+                    providerPhone = dto.mobile ?: "",
                     categoryId = "CAT_1",
                     nameUr = nameUrdu,
-                    descriptionUr = dto.project?.projectName ?: "پنجاب کلین ائیر پروگرام (PCAP)",
+                    descriptionUr = dto.project?.projectName ?: "",
                     modelYear = 2026,
                     hourlyRate = 0.0,
                     // Prefer the machine's own coordinates (now returned by the backend) so map
@@ -236,9 +190,9 @@ class AuthRepositoryImpl @Inject constructor(
                     status = MachineryStatus.APPROVED,
                     imageUrls = picUrls,
                     rating = parsedRating,
-                    acresDone = 12.0,
-                    distanceCoveredKm = 1.2,
-                    districtUr = dto.farmerDistrict ?: "سرگودھا",
+                    acresDone = 0.0,
+                    distanceCoveredKm = 0.0,
+                    districtUr = dto.farmerDistrict ?: "",
                     projectName = dto.project?.projectName,
                     projectLogo = dto.project?.logo,
                     subsidyText = dto.project?.subsidy,
@@ -349,8 +303,8 @@ class AuthRepositoryImpl @Inject constructor(
                     }
                 }
                 
-                val currentUserId = sessionManager.getUserId() ?: "usr_farmer"
-                val currentUserName = sessionManager.getUserName() ?: "معزز کاشتکار"
+                val currentUserId = sessionManager.getUserId() ?: ""
+                val currentUserName = sessionManager.getUserName() ?: ""
                 val currentUserPhone = sessionManager.getUserPhone() ?: ""
 
                 Booking(
@@ -359,7 +313,7 @@ class AuthRepositoryImpl @Inject constructor(
                     farmerName = getCleanName(currentUserName),
                     farmerPhone = currentUserPhone,
                     machineryId = dto.fleetRentalId?.toString() ?: "machine_unknown",
-                    machineryName = dto.machineDetails?.name ?: "زرعی مشین",
+                    machineryName = dto.machineDetails?.name ?: "",
                     bookingDate = dateStr,
                     durationHours = dto.fleetRentalDuration?.toInt() ?: 4,
                     totalPrice = 0.0,
@@ -371,8 +325,8 @@ class AuthRepositoryImpl @Inject constructor(
                         ?: dto.rentalDistrict
                         ?: "مقام دستیاب نہیں",
                     acres = dto.acre ?: 1.0,
-                    providerName = getCleanName(dto.name ?: dto.serviceProviderName ?: "سروس پرووائیڈر"),
-                    providerPhone = dto.serviceProviderMobile ?: "03000000000",
+                    providerName = getCleanName(dto.name ?: dto.serviceProviderName ?: ""),
+                    providerPhone = dto.serviceProviderMobile ?: "",
                     machineryImageUrl = dto.machineDetails?.pictures?.firstOrNull(),
                     isApprovalAllowed = dto.isApprovalAllowed ?: false,
                     rentalRequestStatus = dto.rentalRequestStatus ?: "PENDING",

@@ -115,6 +115,12 @@
     <string name="welcome_alert_message">خوش آمدید، %1$s! کسان مددگار پر آپ کا خیر مقدم ہے۔</string>
     <string name="main_tab_subtitle">اپنے کھیت کے لیے بہترین</string>
     <string name="user_location_title">آپ کا موجودہ مقام</string>
+    <string name="search_this_area">اس علاقے میں تلاش کریں</string>
+    <string name="zoom_in_to_search_area">تلاش کے لیے زوم ان کریں</string>
+    <string name="content_description_search_this_area">اس علاقے میں تلاش کریں</string>
+    <string name="map_loading_text">نقشہ لوڈ ہو رہا ہے…</string>
+    <string name="search_center_marker_title">فاصلہ یہاں سے ناپا گیا ہے</string>
+    <string name="content_description_close_popup">بند کریں</string>
     <string name="hourly_rate_format">کرایہ: %1$d روپے</string>
     <string name="gps_active_label">جی پی ایس آن ہے</string>
     <string name="distance_rating_format">فاصلہ: %1$s کلومیٹر | درجہ بندی: %2$s</string>
@@ -411,6 +417,11 @@
     <string name="machine_booking_info">اپنے قریبی علاقے سے سبسڈی والی زرعی مشینیں کرائے پر حاصل کرنے کے لیے کسی بھی مشین پر کلک کریں اور بکنگ کروائیں۔</string>
     <string name="search_tab_help_narration">مشینری تلاش کرنے کے لیے اوپر دیے گئے خانے میں کاشتکار یا سروس فراہم کنندہ کا نام یا موبائل نمبر لکھیں، مطلوبہ مشینری خود بخود سامنے آ جائے گی۔ آپ ضلع منتخب کر کے تلاش کو مزید محدود بھی کر سکتے ہیں۔ نقشہ بٹن پر دبا کر قریبی مشینریوں کو نقشے پر ان کے محلِ وقوع کے ساتھ بھی دیکھا جا سکتا ہے۔</string>
     <string name="map_popup_narration_format">یہ %1$s کے پاس %2$s دستیاب ہے، جس کا فاصلہ %3$s ہے۔ ربطہ نمبر %4$s ہے اور اس کی درجہ بندی %5$s ستارے ہے۔ بکنگ کے لیے بک کریں کا بٹن دبائیں۔</string>
+    <!-- Guest (not logged in) variant of map_popup_narration_format — the real contact number is
+         hidden from unauthenticated users, so it must never be read aloud (it was rendering as a
+         masked string like "XXXXX-0304", which TTS spoke out as garbled digits). This replaces
+         the "contact number is X" sentence with a natural prompt to book or log in instead. -->
+    <string name="map_popup_narration_guest_format">اس %2$s کے مالک کا نام %1$s ہے، جو آپ سے %3$s کے فاصلے پر ہیں اور جن کی درجہ بندی %4$s ستارے ہے۔ ان سے رابطے کے لیے \'بک کریں\' کے بٹن پر کلک کریں، یا موبائل نمبر پر براہِ راست بات کرنے کے لیے لاگ ان کریں۔</string>
     <string name="machinery_detail_narration_format">یہ %1$s کی %2$s ہے، جس کا فاصلہ %3$s ہے۔ ربطہ نمبر %4$s ہے اور اس کی درجہ بندی %5$s ستارے ہے۔ اس مشین پر پنجاب کلین ائیر پروگرام کے تحت 5000 روپے فی ایکڑ سبسڈی دستیاب ہے۔ بکنگ کے لیے نیچے دیے گئے بٹن پر دبائیں۔</string>
     <string name="my_machinery_list_title">میری مشینری کی فہرست</string>
     <string name="my_machinery_list_subtitle">آپ کی رجسٹرڈ زرعی مشینیں اور ان کے اہم اعداد و شمار</string>
@@ -452,6 +463,12 @@
     <string name="bookings_search_placeholder">بکنگ / موبائل نمبر تلاش کریں</string>
     <string name="bookings_search_no_results">آپ کی تلاش سے کوئی بکنگ نہیں ملی۔</string>
     <string name="no_bookings_desc">نئی بکنگز اور درخواستیں یہاں نظر آئیں گی۔</string>
+    <string name="no_bookings_pending_title">کوئی نئی بکنگ دستیاب نہیں ہے۔</string>
+    <string name="no_bookings_pending_desc">نئی درخواستیں موصول ہوتے ہی یہاں ظاہر ہوں گی۔</string>
+    <string name="no_bookings_ongoing_title">فی الحال کوئی جاری بکنگ نہیں ہے۔</string>
+    <string name="no_bookings_ongoing_desc">منظور شدہ بکنگز جاری ہوتے ہی یہاں دکھائی دیں گی۔</string>
+    <string name="no_bookings_completed_title">ابھی تک کوئی بکنگ مکمل نہیں ہوئی۔</string>
+    <string name="no_bookings_completed_desc">مکمل شدہ بکنگز کی تفصیلات یہاں محفوظ ہوں گی۔</string>
     <string name="guest_machineries_title">اپنی مشینیں دیکھنے کے لیے\nلاگ ان کریں</string>
     <string name="guest_machineries_desc">اپنی مشینوں کا ریکارڈ رکھنے اور دوسرے کسانوں کو کرائے پر دینے کے لیے لاگ ان کرنا ضروری ہے۔</string>
     <string name="auth_req_cnic_error">درست شناختی کارڈ نمبر درج کریں</string>
@@ -518,4 +535,10 @@
     <string name="label_unknown">نامعلوم</string>
     <string name="service_shuruu_karain">سروس کا آغاز کریں</string>
     <string name="scan_karain">کاشتکار کی اسکرین سے QR کوڈ اسکین کریں۔</string>
+
+    <!-- In-app update prompt -->
+    <string name="update_ready_title">اپڈیٹ تیار ہے</string>
+    <string name="update_ready_message">نیا ورژن ڈاؤن لوڈ ہو گیا ہے۔ اسے لاگو کرنے کے لیے ابھی دوبارہ شروع کریں۔</string>
+    <string name="update_ready_confirm_btn">دوبارہ شروع کریں</string>
+    <string name="update_ready_dismiss_btn">بعد میں</string>
 </resources>

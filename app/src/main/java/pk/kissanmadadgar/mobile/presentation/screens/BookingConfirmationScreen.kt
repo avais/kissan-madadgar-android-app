@@ -124,7 +124,7 @@ private fun parseSpokenDate(spoken: String): Long? {
 
     return try {
         val cal = java.util.Calendar.getInstance(java.util.TimeZone.getTimeZone("UTC"))
-        cal.set(year!!, month!!, day!!, 0, 0, 0)
+        cal.set(year, month, day, 0, 0, 0)
         cal.set(java.util.Calendar.MILLISECOND, 0)
         cal.timeInMillis
     } catch (e: Exception) { null }
@@ -404,7 +404,7 @@ fun BookingConfirmationScreen(
         tts.value = ttsInstance
 
         // Set TTS utterance listener to chain the voice flow
-        ttsInstance?.setOnUtteranceProgressListener(object : android.speech.tts.UtteranceProgressListener() {
+        ttsInstance.setOnUtteranceProgressListener(object : android.speech.tts.UtteranceProgressListener() {
             override fun onStart(utteranceId: String?) {
                 if (utteranceId == "success_booking") {
                     isSuccessSpeaking = true
@@ -621,8 +621,6 @@ fun BookingConfirmationScreen(
             SimpleDateFormat("d MMMM yyyy", java.util.Locale("ur", "PK")).format(Date(it))
         } ?: displayDate
         val acresValue = acres.toDoubleOrNull() ?: 0.0
-        val rate = machinery?.hourlyRate ?: 5000.0
-        val total = hours * rate
         val ownerName = machinery?.providerName ?: ""
         val successNarrationText = UrduNarrations.getBookingSuccessNarration(acres, ownerName, displayDateUr)
 
@@ -770,7 +768,6 @@ fun BookingConfirmationScreen(
                         SummaryCard(
                             items = listOf(
                                 stringResource(id = R.string.summary_label_date) to displayDate,
-                                stringResource(id = R.string.summary_label_hours) to hours.toString(),
                                 stringResource(id = R.string.summary_label_acres) to if (acresValue > 0.0) acres else "-"
                             )
                         )
@@ -973,47 +970,92 @@ fun BookingConfirmationScreen(
                                     }
                                 }
                                 Spacer(modifier = Modifier.height(8.dp))
+                                // Full card width, not squeezed against the subsidy badge below —
+                                // that badge claims a fixed chunk of the row it's in regardless of
+                                // available space, so anything sharing a row with it needs its own
+                                // full-width row instead to avoid truncating.
+                                Text(
+                                    text = item.providerName,
+                                    fontSize = 18.sp,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    color = AgriGreenPrimary,
+                                    maxLines = 1,
+                                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                                Spacer(modifier = Modifier.height(8.dp))
+                                // Same full-width treatment as the provider name above — this used
+                                // to live inside the weight(1f) column squeezed against the subsidy
+                                // badge, which is why "سُپَر سِیڈر" was clipping to "سُپَر سِ...".
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Image(
+                                        painter = painterResource(id = R.drawable.ic_super_seeder),
+                                        contentDescription = null,
+                                        modifier = Modifier.size(32.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(
+                                        text = item.nameUr,
+                                        fontSize = 22.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color.Black,
+                                        maxLines = 1,
+                                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                }
+                                Spacer(modifier = Modifier.height(8.dp))
+                                // Same treatment for the phone number, which also gets its own
+                                // TextOverflow.Ellipsis now — it previously had none, so instead of
+                                // truncating visibly it hard-clipped mid-digit with no "..." to show
+                                // anything was missing.
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable {
+                                            val clipboardManager = localContext.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+                                            val clipData = android.content.ClipData.newPlainText("phone", item.providerPhone)
+                                            clipboardManager.setPrimaryClip(clipData)
+                                            android.widget.Toast.makeText(localContext, context.getString(R.string.toast_phone_copied), android.widget.Toast.LENGTH_SHORT).show()
+                                        },
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Image(
+                                        painter = painterResource(id = R.drawable.ic_phone_round),
+                                        contentDescription = null,
+                                        modifier = Modifier.size(32.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    val displayPhone = if (isAuthorized) item.providerPhone else item.providerPhone.take(4) + "-*******"
+                                    Text(
+                                        text = displayPhone,
+                                        color = Color.DarkGray,
+                                        fontSize = 16.sp,
+                                        fontWeight = FontWeight.Medium,
+                                        maxLines = 1,
+                                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                }
+                                Spacer(modifier = Modifier.height(8.dp))
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
                                     horizontalArrangement = Arrangement.SpaceBetween,
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Column(modifier = Modifier.weight(1f)) {
-                                        Text(
-                                            text = item.providerName,
-                                            fontSize = 18.sp,
-                                            fontWeight = FontWeight.ExtraBold,
-                                            color = AgriGreenPrimary,
-                                            maxLines = 1,
-                                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
-                                        )
-                                        Spacer(modifier = Modifier.height(8.dp))
-                                        Row(
-                                            modifier = Modifier.fillMaxWidth(),
-                                            verticalAlignment = Alignment.CenterVertically
-                                        ) {
-                                            Image(
-                                                painter = painterResource(id = R.drawable.ic_super_seeder),
-                                                contentDescription = null,
-                                                modifier = Modifier.size(32.dp)
-                                            )
-                                            Spacer(modifier = Modifier.width(8.dp))
-                                            Text(
-                                                text = item.nameUr,
-                                                fontSize = 22.sp,
-                                                fontWeight = FontWeight.Bold,
-                                                color = Color.Black,
-                                                maxLines = 1,
-                                                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
-                                                modifier = Modifier.weight(1f)
-                                            )
-                                        }
-                                        Spacer(modifier = Modifier.height(8.dp))
                                         val rawDistanceText = item.distanceText ?: "1.2"
-                                        val displayDistanceText = if (rawDistanceText.contains(context.getString(R.string.distance_km_format).replace("%1\$s", "").trim()) || rawDistanceText.contains("km") || rawDistanceText.contains("k.m")) {
-                                            rawDistanceText
-                                        } else {
+                                        // Only wrap plain numeric distances (e.g. "1.2") with the "X کلومیٹر دور"
+                                        // template. The backend can also send an already human-readable phrase
+                                        // (e.g. "کچھ قدم دور" for very short distances) — appending the km
+                                        // suffix to that produced garbled text like "کچھ قدم دور کلومیٹر دور".
+                                        val displayDistanceText = if (rawDistanceText.trim().toDoubleOrNull() != null) {
                                             stringResource(id = R.string.distance_km_format, rawDistanceText)
+                                        } else {
+                                            rawDistanceText
                                         }
                                         Row(verticalAlignment = Alignment.CenterVertically) {
                                             Image(
@@ -1023,31 +1065,6 @@ fun BookingConfirmationScreen(
                                             )
                                             Spacer(modifier = Modifier.width(8.dp))
                                             Text(text = displayDistanceText, color = Color.DarkGray, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
-                                        }
-                                        Spacer(modifier = Modifier.height(8.dp))
-                                        Row(
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            modifier = Modifier.clickable {
-                                                val clipboardManager = localContext.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
-                                                val clipData = android.content.ClipData.newPlainText("phone", item.providerPhone)
-                                                clipboardManager.setPrimaryClip(clipData)
-                                                android.widget.Toast.makeText(localContext, context.getString(R.string.toast_phone_copied), android.widget.Toast.LENGTH_SHORT).show()
-                                            }
-                                        ) {
-                                            Image(
-                                                painter = painterResource(id = R.drawable.ic_phone_round),
-                                                contentDescription = null,
-                                                modifier = Modifier.size(32.dp)
-                                            )
-                                            Spacer(modifier = Modifier.width(8.dp))
-                                            val displayPhone = if (isAuthorized) item.providerPhone else item.providerPhone.take(4) + "-*******"
-                                            Text(
-                                                text = displayPhone,
-                                                color = Color.DarkGray,
-                                                fontSize = 16.sp,
-                                                fontWeight = FontWeight.Medium,
-                                                maxLines = 1
-                                            )
                                         }
                                     }
                                     Spacer(modifier = Modifier.width(12.dp))
@@ -1174,12 +1191,12 @@ fun BookingConfirmationScreen(
                                                             context, android.Manifest.permission.RECORD_AUDIO
                                                         ) == android.content.pm.PackageManager.PERMISSION_GRANTED
                                                     ) {
-                                                        val item = machinery
-                                                        if (item != null) {
+                                                        val machineItem = machinery
+                                                        if (machineItem != null) {
                                                             voiceState = VoiceBookingState.SPEAKING_INTRO
                                                             val userName = user?.fullName ?: context.getString(R.string.user_guest_name)
-                                                            val machineName = item.nameUr
-                                                            val ownerName = item.providerName
+                                                            val machineName = machineItem.nameUr
+                                                            val ownerName = machineItem.providerName
                                                             val introText = UrduNarrations.getBookingIntro(context, userName, machineName, ownerName)
                                                             voiceStatusText = context.getString(R.string.voice_status_listening)
                                                             tts.value?.speak(introText, android.speech.tts.TextToSpeech.QUEUE_FLUSH, null, "intro")
@@ -1317,29 +1334,6 @@ fun BookingConfirmationScreen(
                                     ErrorMessage(message = err)
                                 }
                             }
-
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(text = stringResource(id = R.string.summary_label_hours), fontSize = 16.sp, color = Color.DarkGray)
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    IconButton(onClick = { if (hours > 1) hours-- }) {
-                                        Icon(imageVector = Icons.Default.RemoveCircle, contentDescription = null, tint = AgriGreenPrimary)
-                                    }
-                                    Text(
-                                        text = hours.toString(), 
-                                        fontSize = 20.sp, 
-                                        fontWeight = FontWeight.ExtraBold, 
-                                        color = Color.Black,
-                                        modifier = Modifier.padding(horizontal = 16.dp)
-                                    )
-                                    IconButton(onClick = { hours++ }) {
-                                        Icon(imageVector = Icons.Default.AddCircle, contentDescription = null, tint = AgriGreenPrimary)
-                                    }
-                                }
-                            }
                         }
                     }
 
@@ -1363,7 +1357,7 @@ fun BookingConfirmationScreen(
                                 if (isFormValid) {
                                     isSubmitting = true
                                     viewModel.createBooking(
-                                        item.id, selectedDateMillis!!, hours, item.hourlyRate, acresValue,
+                                        item.id, selectedDateMillis!!, 0, item.hourlyRate, acresValue,
                                         onSuccess = {
                                             isSubmitting = false
                                             showSuccess = true
