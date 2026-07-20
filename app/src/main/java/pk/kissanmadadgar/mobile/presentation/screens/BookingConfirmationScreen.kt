@@ -248,6 +248,12 @@ fun BookingConfirmationScreen(
     var hours by remember { mutableStateOf(4) }
     var isSubmitting by remember { mutableStateOf(false) }
     var showSuccess by remember { mutableStateOf(false) }
+    // A failed submit (e.g. "already have a pending booking for this machinery") previously only
+    // showed a brief Toast before re-enabling the button — easy to miss, and since nothing on
+    // screen changed, testers kept tapping "book now" again and again, each tap firing a fresh
+    // network call for a request that was always going to fail the same way. A blocking dialog
+    // forces the user to actually see and dismiss the failure before they can tap the button again.
+    var submitErrorMessage by remember { mutableStateOf<String?>(null) }
     val user by viewModel.currentUser.collectAsState()
     val focusManager = LocalFocusManager.current
     val focusRequesterAcres = remember { FocusRequester() }
@@ -611,6 +617,19 @@ fun BookingConfirmationScreen(
 
     LaunchedEffect(machineryId) {
         machinery = viewModel.availableMachinery.value.find { it.id == machineryId }
+    }
+
+    submitErrorMessage?.let { errorMessage ->
+        AlertDialog(
+            onDismissRequest = { submitErrorMessage = null },
+            title = { Text(text = "خرابی") },
+            text = { Text(text = errorMessage) },
+            confirmButton = {
+                TextButton(onClick = { submitErrorMessage = null }) {
+                    Text(text = stringResource(id = R.string.btn_ok), color = AgriGreenPrimary, fontWeight = FontWeight.Bold)
+                }
+            }
+        )
     }
 
     if (showSuccess) {
@@ -1362,11 +1381,14 @@ fun BookingConfirmationScreen(
                                             isSubmitting = false
                                             showSuccess = true
                                         },
-                                        onError = {
-                                            // The failure message itself is already shown via a
-                                            // Toast in MainViewModel.createBooking — this just
-                                            // has to stop the button from spinning forever.
+                                        onError = { errorMessage ->
+                                            // MainViewModel.createBooking also shows a brief Toast
+                                            // with this same message — the dialog below is the
+                                            // persistent, must-dismiss version so the failure can't
+                                            // be missed and re-tapping "book now" isn't the user's
+                                            // only visible option.
                                             isSubmitting = false
+                                            submitErrorMessage = errorMessage
                                         }
                                     )
                                 } else {

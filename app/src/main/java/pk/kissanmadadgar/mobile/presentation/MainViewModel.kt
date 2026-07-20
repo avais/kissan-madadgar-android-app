@@ -135,12 +135,21 @@ class MainViewModel @Inject constructor(
     }
 
     fun fetchNotifications(page: Int = 0, append: Boolean = false) {
+        // TEMP DEBUG (BellCrashDebug): tracing each step of the fetch so we can see exactly
+        // where things stop progressing if the notifications screen goes blank. Remove once solved.
+        android.util.Log.d("BellCrashDebug", "fetchNotifications() called page=$page append=$append")
         viewModelScope.launch {
-            val authToken = sessionManager.getAuthToken() ?: return@launch
+            android.util.Log.d("BellCrashDebug", "fetchNotifications coroutine started page=$page")
+            val authToken = sessionManager.getAuthToken() ?: run {
+                android.util.Log.d("BellCrashDebug", "fetchNotifications page=$page no authToken, returning")
+                return@launch
+            }
             val authHeader = if (authToken.startsWith("Bearer ")) authToken else "Bearer $authToken"
             _notificationsLoading.value = true
             try {
+                android.util.Log.d("BellCrashDebug", "fetchNotifications page=$page calling getNotifications()")
                 val response = authApiService.getNotifications(authHeader, page, 10)
+                android.util.Log.d("BellCrashDebug", "fetchNotifications page=$page got response code=${response.code()}")
                 if (response.isSuccessful) {
                     val pageBody = response.body()
                     val newItems = pageBody?.content ?: emptyList()
@@ -151,8 +160,10 @@ class MainViewModel @Inject constructor(
                 }
             } catch (e: Exception) {
                 android.util.Log.e("MainViewModel", "fetchNotifications failed", e)
+                android.util.Log.d("BellCrashDebug", "fetchNotifications page=$page threw ${e::class.simpleName}: ${e.message}")
             } finally {
                 _notificationsLoading.value = false
+                android.util.Log.d("BellCrashDebug", "fetchNotifications page=$page finally reached, loading=false")
             }
         }
     }
@@ -264,6 +275,12 @@ class MainViewModel @Inject constructor(
         heading: Double,
         altitude: Double,
         isMock: Boolean,
+        // Elapsed active-tracking seconds (paused time excluded) — must be computed by the caller
+        // BEFORE this is invoked, not read here: the caller's own stopTracking() call already
+        // deletes the active session file before onStopFarmingActivity ever reaches this function,
+        // so reading FarmingTrackingService.getActiveSession(context) at this point always finds
+        // nothing and silently produces 0.
+        totalServiceTime: Long = 0L,
         onResult: (pk.kissanmadadgar.mobile.data.remote.UploadOutcome) -> Unit = {}
     ) {
         val deviceId = android.provider.Settings.Secure.getString(context.contentResolver, android.provider.Settings.Secure.ANDROID_ID) ?: "android_device"
@@ -285,21 +302,6 @@ class MainViewModel @Inject constructor(
                 )
                 // upsertBookings, not setBookings — see enqueueFarmingStart above for why.
                 bookingRepo.upsertBookings(listOf(updated))
-            }
-
-            // Must be read before the upload runs (it clears the active session file on success)
-            // — same elapsed-active-seconds formula the live timer on the booking card uses
-            // (paused duration excluded either way).
-            val session = pk.kissanmadadgar.mobile.data.local.FarmingTrackingService.getActiveSession(context)
-            val totalServiceTime = if (session != null) {
-                val pausedMs = if (session.isPaused) {
-                    session.pausedDurationMs + (System.currentTimeMillis() - session.lastPauseTimeMs)
-                } else {
-                    session.pausedDurationMs
-                }
-                ((System.currentTimeMillis() - session.startTimeMs - pausedMs) / 1000L).coerceAtLeast(0L)
-            } else {
-                0L
             }
 
             _isSubmittingFarmingAction.value = true
@@ -390,6 +392,13 @@ class MainViewModel @Inject constructor(
     val availableMachineryCurrentPage = _availableMachineryCurrentPage.asStateFlow()
     private val _availableMachineryIsLastPage = MutableStateFlow(true)
     val availableMachineryIsLastPage = _availableMachineryIsLastPage.asStateFlow()
+
+    // Server-computed total booking count for the calling account, piggybacked on
+    // getAvailableMachines' response (0 for a guest token). Replaces the old client-side count
+    // derived from whatever booking statuses happened to already be cached in Room locally —
+    // see MainViewModel.farmerBookings / BookingDao.observeBookings for why that under-counted.
+    private val _myBookingCounter = MutableStateFlow(0)
+    val myBookingCounter = _myBookingCounter.asStateFlow()
     private val _isLoadingMoreMachinery = MutableStateFlow(false)
     val isLoadingMoreMachinery = _isLoadingMoreMachinery.asStateFlow()
     private val _isLoadingAvailableMachinery = MutableStateFlow(false)
@@ -547,6 +556,7 @@ class MainViewModel @Inject constructor(
                     _availableMachinery.value = paginated.machinery
                     _availableMachineryCurrentPage.value = paginated.currentPage
                     _availableMachineryIsLastPage.value = paginated.isLast
+                    _myBookingCounter.value = paginated.myBookingCounter
                 }
                 .onFailure { error ->
                     android.util.Log.e("KissanMadadgar", "MainViewModel fetchAvailableMachines failure", error)
@@ -556,6 +566,41 @@ class MainViewModel @Inject constructor(
                 }
             _isLoadingAvailableMachinery.value = false
         }
+    }
+
+    // The provider phone number the backend includes in getAvailableMachines' response is
+    // redacted for a guest-token request and only sent in full once the same request carries a
+    // real auth token (see AuthRepositoryImpl.getAvailableMachines). Nothing re-fetches this list
+    // on its own after login, so a listing loaded as a guest would otherwise keep showing the
+    // redacted number even after successful OTP verification — re-run the last search with
+    // whatever auth token is current now so the real number comes back, but only if a search was
+    // actually loaded already (nothing to refresh for a user who never opened the search tab).
+    private fun refreshAvailableMachinesIfLoaded() {
+        if (_availableMachinery.value.isEmpty()) return
+        fetchAvailableMachines(
+            availableMachineryLat,
+            availableMachineryLng,
+            availableMachineryType,
+            availableMachineryDistrictId,
+            availableMachineryKeyword,
+            availableMachinerySize
+        )
+    }
+
+    // On-demand road route between two points (e.g. a tapped machinery marker and the map's
+    // search-center/user-location reference point) — deliberately not cached in a StateFlow
+    // here since it's ephemeral, per-tap UI state the map screen owns locally; this is just a
+    // thin suspend wrapper so the screen doesn't need to reach into the repository/session
+    // layer directly. Returns null on failure so the caller can fall back to a straight line.
+    suspend fun getRoute(originLat: Double, originLng: Double, destLat: Double, destLng: Double): pk.kissanmadadgar.mobile.domain.model.RouteInfo? {
+        return authRepo.getRoute(originLat, originLng, destLat, destLng).getOrNull()
+    }
+
+    // "How to use the app" tutorial video links for the home screen's helper tile. Returns an
+    // empty list on failure so the caller can show a simple "not available right now" message
+    // instead of crashing or needing its own separate error-handling path.
+    suspend fun getHelperVideos(): List<String> {
+        return authRepo.getHelperVideos().getOrNull() ?: emptyList()
     }
 
     // Appends the next page of nearby machinery for the Search tab's infinite scroll.
@@ -781,6 +826,7 @@ class MainViewModel @Inject constructor(
                     sessionManager.saveUserPhone(updatedProvider.phoneNumber)
                     loadRoleSpecificData(updatedProvider.id, UserRole.PROVIDER)
                     syncPushToken()
+                    refreshAvailableMachinesIfLoaded()
                     onSuccess()
                 } else {
                     onError(context.getString(R.string.err_invalid_otp_code))
@@ -813,6 +859,7 @@ class MainViewModel @Inject constructor(
                     fetchSupportInfo()
                     loadRoleSpecificData(user.id, role)
                     syncPushToken()
+                    refreshAvailableMachinesIfLoaded()
                     onSuccess()
                 }
                 .onFailure {

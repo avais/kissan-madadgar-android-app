@@ -260,9 +260,11 @@ class FarmingUploadSyncManager private constructor(
             // meaningful for COMPLETE (endPictureMetaData) — a session that's just starting has no
             // elapsed time yet, so it's omitted from the START (startPictureMetaData) shape below.
             val metaDataJson = if (item.actionType == "COMPLETE") {
+                // trackLogs is deliberately NOT duplicated here when non-empty — the exact same
+                // points are already sent as the top-level gpsLogs field on this same request,
+                // so embedding them again here just doubled the payload for no reason.
                 val metaDataMap: Map<String, Any?> = if (trackList.isNotEmpty()) {
                     mapOf(
-                        "trackLogs" to trackList,
                         "totalServiceTime" to item.totalServiceTime
                     )
                 } else {
@@ -291,11 +293,12 @@ class FarmingUploadSyncManager private constructor(
                             latitude = metric.latitude,
                             longitude = metric.longitude,
                             deviceId = item.deviceId,
-                            accuracy = 5.0,
+                            accuracy = metric.accuracy.toDouble(),
                             speed = metric.speed.toDouble(),
                             heading = metric.bearing.toDouble(),
                             altitude = metric.altitude,
-                            mockLocationDetection = metric.isMock
+                            mockLocationDetection = metric.isMock,
+                            timestamp = metric.timestamp
                         )
                     }
                 } else {
@@ -308,7 +311,8 @@ class FarmingUploadSyncManager private constructor(
                             speed = item.speed,
                             heading = item.heading,
                             altitude = item.altitude,
-                            mockLocationDetection = item.isMock
+                            mockLocationDetection = item.isMock,
+                            timestamp = item.timestamp
                         )
                     )
                 }

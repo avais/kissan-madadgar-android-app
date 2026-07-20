@@ -1,5 +1,8 @@
 package pk.kissanmadadgar.mobile.presentation.screens
 
+import android.app.Activity
+import android.widget.Toast
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.verticalScroll
@@ -107,6 +110,21 @@ fun FarmerHomeScreen(
     val supportResponse by viewModel.supportResponse.collectAsState()
     val isLoggingOut by viewModel.isLoggingOut.collectAsState()
     var logoutBlockedReason by remember { mutableStateOf<LogoutOutcome?>(null) }
+
+    // FarmerHomeScreen is the root destination (bottom of the nav stack), so a back press
+    // here has nothing left to pop to and would otherwise exit the app immediately with no
+    // warning. Require a second back press within 2s to actually exit, same double-tap-to-exit
+    // pattern used elsewhere (WhatsApp, Instagram, etc.).
+    var lastBackPressTime by remember { mutableStateOf(0L) }
+    BackHandler(enabled = true) {
+        val now = System.currentTimeMillis()
+        if (now - lastBackPressTime < 2000) {
+            (context as? Activity)?.finish()
+        } else {
+            lastBackPressTime = now
+            Toast.makeText(context, context.getString(R.string.press_back_again_to_exit), Toast.LENGTH_SHORT).show()
+        }
+    }
 
     // Logout is gated on FarmingUploadSyncManager's queue being empty (see
     // MainViewModel.requestLogout) so an unsynced start/complete record is never silently
@@ -908,7 +926,7 @@ fun FeaturedMachineryCard(machinery: Machinery, onClick: () -> Unit) {
                 Divider(color = Color(0xFFF0F0F0))
                 Spacer(modifier = Modifier.height(12.dp))
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                    Text(text = stringResource(id = R.string.distance_km_format, "1.2"), color = Color.Gray, fontSize = 13.sp)
+                    Text(text = machinery.distanceText ?: stringResource(id = R.string.distance_km_format, "1.2"), color = Color.Gray, fontSize = 13.sp)
                     Text(text = stringResource(id = R.string.hourly_rate_format, machinery.hourlyRate.toInt()) + stringResource(id = R.string.per_hour_suffix), color = AgriGreenPrimary, fontWeight = FontWeight.Bold, fontSize = 16.sp)
                 }
             }
@@ -1250,7 +1268,10 @@ fun FarmerMainTab(
 ) {
     val context = LocalContext.current
     val availableList by viewModel.availableMachinery.collectAsState()
-    val bookings by viewModel.farmerBookings.collectAsState()
+    // Server-computed total booking count (0 for a guest) — see MainViewModel.myBookingCounter.
+    // Replaces the old local bookings.size count, which under-counted since the Room cache only
+    // ever holds whichever booking statuses happened to already be fetched this session.
+    val myBookingCounter by viewModel.myBookingCounter.collectAsState()
     val user by viewModel.currentUser.collectAsState()
     val isAuthorized = user != null
     val homeUserLocation by viewModel.userLocation.collectAsState()
@@ -1600,7 +1621,7 @@ fun FarmerMainTab(
 
                     AgriHomeStatCard(
                         title = stringResource(id = R.string.home_stats_bookings),
-                        value = if (user == null) "0" else bookings.size.toString(),
+                        value = if (user == null) "0" else myBookingCounter.toString(),
                         icon = Icons.Default.ReceiptLong,
                         color = Color(0xFFE65100),
                         isSelected = false,
@@ -1610,7 +1631,7 @@ fun FarmerMainTab(
                             if (activeSpeakingAudioId == "stat_bookings") {
                                 pk.kissanmadadgar.mobile.data.local.NarrationManager.stop()
                             } else {
-                                val count = if (user == null) 0 else bookings.size
+                                val count = if (user == null) 0 else myBookingCounter
                                 val text = "معزز کاشتکار، آپ کی کل بکنگز کی تعداد $count ہے۔"
                                 pk.kissanmadadgar.mobile.data.local.NarrationManager.speak(text, "stat_bookings")
                             }
@@ -1622,18 +1643,87 @@ fun FarmerMainTab(
             }
 
             item(key = "extra_actions_tiles") {
-                Box(
+                val helperVideoCoroutineScope = rememberCoroutineScope()
+                var isLoadingHelperVideos by remember { mutableStateOf(false) }
+                var activeHelperVideoUrls by remember { mutableStateOf<List<String>>(emptyList()) }
+                val videoUnavailableText = stringResource(id = R.string.helper_video_unavailable)
+
+                if (activeHelperVideoUrls.isNotEmpty()) {
+                    // Plays in-app, full screen, swipeable across every helper video the backend
+                    // returns — see FullScreenHelperVideoPlayer.
+                    FullScreenHelperVideoPlayer(
+                        videoUrls = activeHelperVideoUrls,
+                        onDismiss = { activeHelperVideoUrls = emptyList() }
+                    )
+                }
+
+                // محکمہ زراعت کی اسکیمیں shrunk down from a full-width banner to the same small
+                // AgriHomeStatCard size/style as "نقشے سے منتخب کریں" above, now sharing a row
+                // with the new "how to use the app" tutorial-video tile. isSelected/isAnySelected
+                // are hardcoded false here — these two tiles aren't part of the map-filter
+                // selection state the stats row above uses, so they must never dim/highlight
+                // because of it.
+                Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(start = 16.dp, end = 16.dp, bottom = 16.dp)
+                        .padding(start = 16.dp, end = 16.dp, bottom = 16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    ActionTileCard(
+                    val schemesNarrationText = stringResource(id = R.string.schemes_card_narration)
+                    val helperVideoNarrationText = stringResource(id = R.string.home_helper_video_narration)
+
+                    AgriHomeStatCard(
                         title = stringResource(id = R.string.schemes_card_title),
-                        subtitle = stringResource(id = R.string.schemes_card_subtitle),
+                        value = "",
                         icon = Icons.Default.Announcement,
                         color = Color(0xFF1976D2),
+                        isSelected = false,
+                        isAnySelected = false,
                         onClick = onNavigateToGovernmentSchemes,
-                        modifier = Modifier.fillMaxWidth()
+                        onSpeakClick = {
+                            if (activeSpeakingAudioId == "stat_schemes") {
+                                pk.kissanmadadgar.mobile.data.local.NarrationManager.stop()
+                            } else {
+                                pk.kissanmadadgar.mobile.data.local.NarrationManager.speak(schemesNarrationText, "stat_schemes")
+                            }
+                        },
+                        isSpeaking = activeSpeakingAudioId == "stat_schemes",
+                        modifier = Modifier.weight(1f)
+                    )
+
+                    AgriHomeStatCard(
+                        title = stringResource(id = R.string.home_helper_video_title),
+                        value = "",
+                        icon = Icons.Default.PlayCircleFilled,
+                        color = Color(0xFF00838F),
+                        isSelected = false,
+                        isAnySelected = false,
+                        onSpeakClick = {
+                            if (activeSpeakingAudioId == "stat_helper_video") {
+                                pk.kissanmadadgar.mobile.data.local.NarrationManager.stop()
+                            } else {
+                                pk.kissanmadadgar.mobile.data.local.NarrationManager.speak(helperVideoNarrationText, "stat_helper_video")
+                            }
+                        },
+                        isSpeaking = activeSpeakingAudioId == "stat_helper_video",
+                        onClick = {
+                            if (!isLoadingHelperVideos) {
+                                isLoadingHelperVideos = true
+                                helperVideoCoroutineScope.launch {
+                                    val urls = viewModel.getHelperVideos()
+                                    isLoadingHelperVideos = false
+                                    if (urls.isEmpty()) {
+                                        android.widget.Toast.makeText(context, videoUnavailableText, android.widget.Toast.LENGTH_SHORT).show()
+                                    } else {
+                                        // Opens directly — no picker screen — starting at the
+                                        // first video; swipe up/down inside the player to move
+                                        // through the rest.
+                                        activeHelperVideoUrls = urls
+                                    }
+                                }
+                            }
+                        },
+                        modifier = Modifier.weight(1f)
                     )
                 }
             }
@@ -1821,9 +1911,28 @@ fun MachineryDetailScreen(
             }
         } else {
             val context = LocalContext.current
-            
+
+            // Audio narration for this machine's details — reuses the same NarrationManager
+            // singleton and narration text formats already used by the map popup card
+            // (GoogleMachineryMap.kt's MachineryPopupCard), so the same tap reads out the same
+            // info here on the full-screen details view.
+            LaunchedEffect(Unit) {
+                pk.kissanmadadgar.mobile.data.local.NarrationManager.initialize(context)
+            }
+            val activeDetailNarrationId by pk.kissanmadadgar.mobile.data.local.NarrationManager.activeUtteranceId.collectAsState()
+            val isDetailSpeaking = activeDetailNarrationId == "machinery_detail_narration"
+            // Stop narration if the user navigates away while it's still speaking, instead of
+            // leaving it running in the background after this screen is gone.
+            DisposableEffect(Unit) {
+                onDispose {
+                    if (pk.kissanmadadgar.mobile.data.local.NarrationManager.isSpeaking("machinery_detail_narration")) {
+                        pk.kissanmadadgar.mobile.data.local.NarrationManager.stop()
+                    }
+                }
+            }
+
             // Collect images to show in pager
-            
+
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -1926,7 +2035,10 @@ fun MachineryDetailScreen(
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Icon(imageVector = Icons.Default.LocationOn, contentDescription = null, tint = Color.DarkGray, modifier = Modifier.size(18.dp))
                                 Spacer(modifier = Modifier.width(4.dp))
-                                Text(text = stringResource(id = R.string.distance_km_format, "1.2"), color = Color.DarkGray, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+                                // item.distanceText already comes fully formatted from the server
+                                // (e.g. "2351.1 کلومیٹر دور") — same field the search list and map
+                                // popup use, so this now matches instead of showing a hardcoded "1.2".
+                                Text(text = item.distanceText ?: stringResource(id = R.string.distance_km_format, "1.2"), color = Color.DarkGray, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
                             }
                             Spacer(modifier = Modifier.height(4.dp))
                             val displayPhone: String = if (isAuthorized) item.providerPhone else item.providerPhone.take(4) + "-*******"
@@ -1956,32 +2068,89 @@ fun MachineryDetailScreen(
                         }
                         
                         Spacer(modifier = Modifier.width(16.dp))
-                        
-                        // Dial Button
-                        Box(
-                            modifier = Modifier
-                                .size(52.dp)
-                                .clip(CircleShape)
-                                .background(AgriGreenPrimary)
-                                .clickable {
-                                    if (isAuthorized) {
-                                        val intent = android.content.Intent(android.content.Intent.ACTION_DIAL).apply {
-                                            data = android.net.Uri.parse("tel:${item.providerPhone}")
+
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            // Audio narration — same SupportAgent/VolumeUp gradient-circle style
+                            // used for narration everywhere else in the app.
+                            Box(
+                                modifier = Modifier
+                                    .size(36.dp)
+                                    .clip(CircleShape)
+                                    .background(
+                                        brush = Brush.linearGradient(
+                                            colors = if (isDetailSpeaking) {
+                                                listOf(Color(0xFFE65100), Color(0xFFFF3D00))
+                                            } else {
+                                                listOf(Color(0xFFFFD54F), Color(0xFFFF8F00))
+                                            }
+                                        )
+                                    )
+                                    .clickable {
+                                        if (isDetailSpeaking) {
+                                            pk.kissanmadadgar.mobile.data.local.NarrationManager.stop()
+                                        } else {
+                                            // Guests never see the real contact number, so it must
+                                            // not be read aloud either — same guest/authorized
+                                            // narration split as the map popup card.
+                                            val text = if (isAuthorized) {
+                                                context.getString(
+                                                    R.string.map_popup_narration_format,
+                                                    item.providerName,
+                                                    item.nameUr,
+                                                    item.distanceText ?: "",
+                                                    item.providerPhone,
+                                                    item.rating.toString()
+                                                )
+                                            } else {
+                                                context.getString(
+                                                    R.string.map_popup_narration_guest_format,
+                                                    item.providerName,
+                                                    item.nameUr,
+                                                    item.distanceText ?: "",
+                                                    item.rating.toString()
+                                                )
+                                            }
+                                            pk.kissanmadadgar.mobile.data.local.NarrationManager.speak(text, "machinery_detail_narration")
                                         }
-                                        context.startActivity(intent)
-                                    } else {
-                                        pendingAction = {
+                                    },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = if (isDetailSpeaking) Icons.Default.VolumeUp else Icons.Default.SupportAgent,
+                                    contentDescription = stringResource(id = R.string.content_description_listen_audio),
+                                    tint = Color.White,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+
+                            Spacer(modifier = Modifier.height(10.dp))
+
+                            // Dial Button
+                            Box(
+                                modifier = Modifier
+                                    .size(52.dp)
+                                    .clip(CircleShape)
+                                    .background(AgriGreenPrimary)
+                                    .clickable {
+                                        if (isAuthorized) {
                                             val intent = android.content.Intent(android.content.Intent.ACTION_DIAL).apply {
                                                 data = android.net.Uri.parse("tel:${item.providerPhone}")
                                             }
                                             context.startActivity(intent)
+                                        } else {
+                                            pendingAction = {
+                                                val intent = android.content.Intent(android.content.Intent.ACTION_DIAL).apply {
+                                                    data = android.net.Uri.parse("tel:${item.providerPhone}")
+                                                }
+                                                context.startActivity(intent)
+                                            }
+                                            showAuthFlow = true
                                         }
-                                        showAuthFlow = true
-                                    }
-                                },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(imageVector = Icons.Default.Phone, contentDescription = null, tint = Color.White, modifier = Modifier.size(24.dp))
+                                    },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(imageVector = Icons.Default.Phone, contentDescription = null, tint = Color.White, modifier = Modifier.size(24.dp))
+                            }
                         }
                     }
 
@@ -2164,6 +2333,7 @@ fun FarmerAuthScreen(
     isDialog: Boolean = false,
     requireCnic: Boolean = false
 ) {
+    val context = LocalContext.current
     var phone by remember { mutableStateOf("") }
     var otp by remember { mutableStateOf("") }
     var cnic by remember { mutableStateOf("") }
@@ -2177,13 +2347,23 @@ fun FarmerAuthScreen(
     val supportResponse by viewModel.supportResponse.collectAsState()
     var timerSeconds by remember { mutableIntStateOf(300) }
 
+    // Audio narration for the phone-entry stage — same shared TTS singleton and same
+    // SupportAgent/VolumeUp gradient-circle icon used for narration everywhere else in the app
+    // (see MyBookings.kt's BookingsSearchBar, NotificationsScreen.kt).
+    val authNarrationId = "auth_req_narration"
+    val activeNarrationId by pk.kissanmadadgar.mobile.data.local.NarrationManager.activeUtteranceId.collectAsState()
+    val isNarrationSpeaking = activeNarrationId == authNarrationId
+    val authNarrationText = stringResource(id = R.string.auth_req_narration)
+
     LaunchedEffect(Unit) {
         viewModel.fetchSupportInfo(module = "LOGIN")
+        pk.kissanmadadgar.mobile.data.local.NarrationManager.initialize(context)
     }
-    
+
     LaunchedEffect(isOtpStage) {
         if (isOtpStage) {
             timerSeconds = 300
+            pk.kissanmadadgar.mobile.data.local.NarrationManager.stop()
         } else {
             otp = ""
             errorMessage = null
@@ -2240,7 +2420,10 @@ fun FarmerAuthScreen(
                 Box(modifier = Modifier.fillMaxWidth()) {
                     // Back / Close button
                     androidx.compose.material3.IconButton(
-                        onClick = onDismiss,
+                        onClick = {
+                            pk.kissanmadadgar.mobile.data.local.NarrationManager.stop()
+                            onDismiss()
+                        },
                         modifier = Modifier
                             .align(Alignment.TopEnd)
                             .padding(bottom = 16.dp),
@@ -2279,12 +2462,51 @@ fun FarmerAuthScreen(
                 }
             } else if (!isOtpStage) {
                 // Stage 1: Phone Input
-                Text(
-                    text = stringResource(id = R.string.auth_req_title),
-                    fontSize = 24.sp,
-                    fontWeight = FontWeight.ExtraBold,
-                    color = Color.Black
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    Text(
+                        text = stringResource(id = R.string.auth_req_title),
+                        fontSize = 24.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = Color.Black
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    // Same compact speak-button style as MyBookings.kt/NotificationsScreen.kt —
+                    // SupportAgent while idle, VolumeUp while speaking, orange-to-red gradient circle.
+                    Box(
+                        modifier = Modifier
+                            .size(28.dp)
+                            .shadow(elevation = 2.dp, shape = CircleShape)
+                            .background(
+                                brush = Brush.linearGradient(
+                                    colors = if (isNarrationSpeaking) {
+                                        listOf(Color(0xFFE65100), Color(0xFFFF3D00))
+                                    } else {
+                                        listOf(Color(0xFFFFD54F), Color(0xFFFF8F00))
+                                    }
+                                ),
+                                shape = CircleShape
+                            )
+                            .clip(CircleShape)
+                            .clickable {
+                                if (isNarrationSpeaking) {
+                                    pk.kissanmadadgar.mobile.data.local.NarrationManager.stop()
+                                } else {
+                                    pk.kissanmadadgar.mobile.data.local.NarrationManager.speak(authNarrationText, authNarrationId)
+                                }
+                            },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = if (isNarrationSpeaking) Icons.Default.VolumeUp else Icons.Default.SupportAgent,
+                            contentDescription = stringResource(id = R.string.content_description_listen_audio),
+                            tint = Color.White,
+                            modifier = Modifier.size(14.dp)
+                        )
+                    }
+                }
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
                     text = stringResource(id = R.string.auth_req_desc),

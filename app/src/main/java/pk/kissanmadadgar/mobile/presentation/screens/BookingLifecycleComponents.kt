@@ -1361,11 +1361,12 @@ fun FarmerRequestCard(
     onResumeFarmingActivity: (() -> Unit)? = null,
     onScanQrClick: (() -> Unit)? = null,
     onShowQrClick: (() -> Unit)? = null,
-    onStopFarmingActivity: ((localFilePath: String, lat: Double, lng: Double, accuracy: Double, speed: Double, heading: Double, altitude: Double, isMock: Boolean) -> Unit)? = null,
+    onStopFarmingActivity: ((localFilePath: String, lat: Double, lng: Double, accuracy: Double, speed: Double, heading: Double, altitude: Double, isMock: Boolean, totalServiceTime: Long) -> Unit)? = null,
     onSubmitFeedback: ((rating: Int, comment: String, onResult: (Boolean, String?) -> Unit) -> Unit)? = null
 ) {
     val statusInfo = statusUi(booking.status)
     val context = LocalContext.current
+    val fusedLocationClient = remember { com.google.android.gms.location.LocationServices.getFusedLocationProviderClient(context) }
     var showRejectDialog by remember { mutableStateOf(false) }
     var showFeedbackDialog by remember { mutableStateOf(false) }
     var feedbackSubmitted by remember { mutableStateOf(false) }
@@ -2293,11 +2294,26 @@ fun FarmerRequestCard(
                     onPictureCaptured = { bitmap ->
                         showCameraFrameDialog = false
 
-                        // Grab the last known metric and end the tracking session/foreground
-                        // service right away — the user has already confirmed and taken the
-                        // final photo, so the on-screen timer and location tracking must stop
-                        // now regardless of how long the background upload to the server takes.
+                        // Kept only as a fallback for when the fresh fetch below fails (no
+                        // permission, provider timeout, etc.) — must be read before stopTracking()
+                        // deletes the active session file. Same elapsed-active-seconds formula as
+                        // the live timer above (paused duration excluded either way).
                         val lastLog = pk.kissanmadadgar.mobile.data.local.FarmingTrackingService.getTrackLogs(context, booking.id).lastOrNull()
+                        val activeSessionAtStop = pk.kissanmadadgar.mobile.data.local.FarmingTrackingService.getActiveSession(context)
+                        val totalServiceTimeAtStop = if (activeSessionAtStop != null) {
+                            val pausedMs = if (activeSessionAtStop.isPaused) {
+                                activeSessionAtStop.pausedDurationMs + (System.currentTimeMillis() - activeSessionAtStop.lastPauseTimeMs)
+                            } else {
+                                activeSessionAtStop.pausedDurationMs
+                            }
+                            ((System.currentTimeMillis() - activeSessionAtStop.startTimeMs - pausedMs) / 1000L).coerceAtLeast(0L)
+                        } else {
+                            0L
+                        }
+                        // End the tracking session/foreground service right away — the user has
+                        // already confirmed and taken the final photo, so the on-screen timer and
+                        // location tracking must stop now regardless of how long the fresh
+                        // location fetch or background upload takes.
                         pk.kissanmadadgar.mobile.data.local.FarmingTrackingService.stopTracking(context, booking.id)
 
                         val dir = java.io.File(context.filesDir, "uploads")
@@ -2308,23 +2324,50 @@ fun FarmerRequestCard(
                                 bitmap.compress(Bitmap.CompressFormat.JPEG, 90, out)
                             }
 
-                            val lat = lastLog?.latitude ?: 0.0
-                            val lng = lastLog?.longitude ?: 0.0
-                            val altitude = lastLog?.altitude ?: 0.0
-                            val speed = lastLog?.speed?.toDouble() ?: 0.0
-                            val bearing = lastLog?.bearing?.toDouble() ?: 0.0
-                            val isMock = lastLog?.isMock ?: false
+                            // Reports whatever fields are available: a genuinely fresh fix first,
+                            // the last periodic tracking-log entry if the fresh fetch failed, and
+                            // 0.0/false only if neither source produced a result at all.
+                            val finishStop: (android.location.Location?) -> Unit = { freshLoc ->
+                                val lat = freshLoc?.latitude ?: lastLog?.latitude ?: 0.0
+                                val lng = freshLoc?.longitude ?: lastLog?.longitude ?: 0.0
+                                val altitude = freshLoc?.altitude ?: lastLog?.altitude ?: 0.0
+                                val speed = (freshLoc?.speed ?: lastLog?.speed)?.toDouble() ?: 0.0
+                                val bearing = (freshLoc?.bearing ?: lastLog?.bearing)?.toDouble() ?: 0.0
+                                val accuracy = (freshLoc?.accuracy ?: lastLog?.accuracy)?.toDouble() ?: 0.0
+                                val isMock = freshLoc?.let { androidx.core.location.LocationCompat.isMock(it) } ?: lastLog?.isMock ?: false
 
-                            onStopFarmingActivity?.invoke(
-                                imageFile.absolutePath,
-                                lat,
-                                lng,
-                                5.0,
-                                speed,
-                                bearing,
-                                altitude,
-                                isMock
-                            )
+                                onStopFarmingActivity?.invoke(
+                                    imageFile.absolutePath,
+                                    lat,
+                                    lng,
+                                    accuracy,
+                                    speed,
+                                    bearing,
+                                    altitude,
+                                    isMock,
+                                    totalServiceTimeAtStop
+                                )
+                            }
+
+                            val hasFine = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+                            val hasCoarse = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
+                            if (hasFine || hasCoarse) {
+                                try {
+                                    val cancellationTokenSource = com.google.android.gms.tasks.CancellationTokenSource()
+                                    fusedLocationClient.getCurrentLocation(
+                                        com.google.android.gms.location.Priority.PRIORITY_HIGH_ACCURACY,
+                                        cancellationTokenSource.token
+                                    ).addOnSuccessListener { freshLoc ->
+                                        finishStop(freshLoc)
+                                    }.addOnFailureListener {
+                                        finishStop(null)
+                                    }
+                                } catch (e: SecurityException) {
+                                    finishStop(null)
+                                }
+                            } else {
+                                finishStop(null)
+                            }
                         } catch (e: Exception) {
                             android.widget.Toast.makeText(context, "تصویر محفوظ کرنے میں ناکامی: ${e.message}", android.widget.Toast.LENGTH_SHORT).show()
                         }

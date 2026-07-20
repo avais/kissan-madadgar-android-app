@@ -497,13 +497,15 @@ fun FarmerSearchTab(
     val isSpeaking = activeNarrationId == "search_tab_help"
 
     // Instant client-side narrowing over whatever is already loaded, so the list feels
-    // responsive while the debounced server search below is still in flight. Must cover the same
-    // fields the server's keyword search does (name/description AND provider name/phone) —
-    // otherwise once the server response lands in availableList (e.g. phone-number matches that
-    // don't mention the query in nameUr/descriptionUr at all), this filter would immediately
-    // strip those results back out again, making it look like the server "isn't returning data".
-    val filteredList = remember(query, availableList) {
-        if (query.trim().isEmpty()) {
+    // responsive while the debounced server search below is still in flight (isLoadingAvailableMachinery
+    // == true). Once that fetch actually completes, availableList already reflects the server's own
+    // keyword match for this exact query — re-applying this heuristic filter on top of it can
+    // incorrectly strip results back out, e.g. a phone-number search where the server correctly
+    // matched against the real number but returns it redacted (masked for a guest/unauthenticated
+    // session), so the literal query text no longer appears in providerPhone client-side even
+    // though the server legitimately found and returned that result.
+    val filteredList = remember(query, availableList, isLoadingAvailableMachinery) {
+        if (query.trim().isEmpty() || !isLoadingAvailableMachinery) {
             availableList
         } else {
             availableList.filter {
@@ -515,11 +517,6 @@ fun FarmerSearchTab(
         }
     }
 
-    // Debounced server-side search: calls /getAvailableMachines with the keyword param
-    // (and whatever district filter is active) instead of only filtering the already-fetched
-    // page locally. Also refetches when the full-screen map opens, since it needs a much bigger
-    // batch than the list's small paginated page to actually look populated. Skips the very
-    // first composition since the tab's initial load already fetched the unfiltered list.
     var isFirstSearchEffect by remember { mutableStateOf(true) }
     LaunchedEffect(query, selectedDistrict, isMapFullScreen) {
         if (isFirstSearchEffect) {
@@ -531,7 +528,10 @@ fun FarmerSearchTab(
                 userLocation.second,
                 "search",
                 districtId = selectedDistrict?.id,
-                keyword = query.trim().ifEmpty { null },
+                // The map searches by area, not by whatever text is sitting in the search box —
+                // carrying the keyword over here silently narrows the map's results to it (e.g.
+                // a phone number search), which looks like the map is broken.
+                keyword = if (isMapFullScreen) null else query.trim().ifEmpty { null },
                 size = if (isMapFullScreen) 50 else 10
             )
         }
@@ -568,7 +568,11 @@ fun FarmerSearchTab(
         ) {
             UrduTextField(
                 value = query,
-                onValueChange = { query = it },
+                onValueChange = { input ->
+                    if (input.length <= 20) {
+                        query = input
+                    }
+                },
                 label = stringResource(id = R.string.search_machinery_hint),
                 modifier = Modifier.weight(1f)
             )
@@ -665,14 +669,17 @@ fun FarmerSearchTab(
             // Re-runs the same server search the debounced keyword/district effect above uses,
             // just centered on wherever the user panned to instead of the device's GPS position.
             // Tagged "map" (not "search") since this request originates from panning the map
-            // itself, not the tab's own keyword/district search box.
+            // itself, not the tab's own keyword/district search box. Keyword is intentionally
+            // dropped here — the map searches by area, and carrying over a text query (e.g. a
+            // phone number typed in the search box) would silently filter the map results by it,
+            // which looks like the map is broken/empty for no visible reason.
             onSearchThisArea = { lat, lng ->
                 viewModel.fetchAvailableMachines(
                     lat,
                     lng,
                     "map",
                     districtId = selectedDistrict?.id,
-                    keyword = query.trim().ifEmpty { null },
+                    keyword = null,
                     // The area-search chip only enables at zoom >= 10 (see MIN_AREA_SEARCH_ZOOM in
                     // GoogleMachineryMap.kt), so the visible radius is already small enough that
                     // ~25 nearest results reliably covers it without a heavy per-tap payload.

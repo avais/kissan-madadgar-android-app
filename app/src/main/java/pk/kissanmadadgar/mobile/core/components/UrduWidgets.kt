@@ -152,6 +152,8 @@ fun UrduTextField(
     placeholder: String = "",
     errorText: String? = null,
     isPhoneNumber: Boolean = false,
+    singleLine: Boolean = true,
+    maxLines: Int = 1,
     keyboardOptions: androidx.compose.foundation.text.KeyboardOptions = if (isPhoneNumber) {
         androidx.compose.foundation.text.KeyboardOptions(
             keyboardType = androidx.compose.ui.text.input.KeyboardType.Number,
@@ -173,6 +175,8 @@ fun UrduTextField(
                 shape = RoundedCornerShape(12.dp),
                 isError = errorText != null,
                 keyboardOptions = keyboardOptions,
+                singleLine = singleLine,
+                maxLines = maxLines,
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedTextColor = Color.Black,
                     unfocusedTextColor = Color.Black,

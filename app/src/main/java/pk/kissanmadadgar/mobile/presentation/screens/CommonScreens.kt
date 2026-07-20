@@ -42,6 +42,7 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.animation.core.*
 import pk.kissanmadadgar.mobile.R
+import pk.kissanmadadgar.mobile.core.AppConfig
 import pk.kissanmadadgar.mobile.core.components.UrduButton
 import pk.kissanmadadgar.mobile.core.theme.AgriGreenLight
 import pk.kissanmadadgar.mobile.core.theme.AgriGreenPrimary
@@ -186,6 +187,14 @@ fun SplashScreen(
             }
 
             // Bottom spacing balancing the top height
+            Text(
+                text = "V${AppConfig.VERSION_NAME}",
+                color = Color(0xFF9E9E9E),
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Medium,
+                modifier = Modifier.graphicsLayer(alpha = appAlpha)
+            )
+
             Spacer(modifier = Modifier.height(16.dp))
         }
     }

@@ -108,7 +108,20 @@ data class PaginatedMachinery(
     val totalPages: Int,
     val totalElements: Long,
     val isLast: Boolean,
-    val currentPage: Int
+    val currentPage: Int,
+    // Server-computed total booking count for the calling account (0 for a guest token).
+    val myBookingCounter: Int = 0
+)
+
+// isRoadRoute false means the backend couldn't get a real road route (no route found, key
+// issue, rate limit, timeout) — distanceMeters/estimatedMinutes are still a straight-line
+// estimate in that case, but encodedPolyline is null and the caller should draw a plain
+// straight line between the two points instead of a decoded road path.
+data class RouteInfo(
+    val isRoadRoute: Boolean,
+    val distanceMeters: Long,
+    val encodedPolyline: String?,
+    val estimatedMinutes: Int
 )
 
 enum class BookingPhotoStep {

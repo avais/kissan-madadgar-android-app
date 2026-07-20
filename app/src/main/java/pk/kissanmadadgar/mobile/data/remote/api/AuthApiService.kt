@@ -15,6 +15,8 @@ import pk.kissanmadadgar.mobile.data.remote.dto.SupportResponse
 import pk.kissanmadadgar.mobile.data.remote.dto.AvailableMachineDto
 import pk.kissanmadadgar.mobile.data.remote.dto.LocationRequestDto
 import pk.kissanmadadgar.mobile.data.remote.dto.AvailableMachinesResponseDto
+import pk.kissanmadadgar.mobile.data.remote.dto.RouteRequestDto
+import pk.kissanmadadgar.mobile.data.remote.dto.RouteResponseDto
 import pk.kissanmadadgar.mobile.data.remote.dto.MyMachinesResponseDto
 import pk.kissanmadadgar.mobile.data.remote.dto.RentalBookingRequest
 import pk.kissanmadadgar.mobile.data.remote.dto.UpdateProfileRequest
@@ -81,6 +83,12 @@ interface AuthApiService {
         @Header("Authorization") token: String,
         @Body request: LocationRequestDto
     ): Response<AvailableMachinesResponseDto>
+
+    @POST("api/auth/android/getRoute")
+    suspend fun getRoute(
+        @Header("Authorization") token: String,
+        @Body request: RouteRequestDto
+    ): Response<RouteResponseDto>
 
     @GET("api/android/my-machines")
     suspend fun getMyMachines(
@@ -175,6 +183,11 @@ interface AuthApiService {
     @GET("api/auth/android/government-projects")
     suspend fun getGovernmentProjects(): Response<List<GovernmentProjectDto>>
 
+    // "How to use the app" tutorial video links (direct MP4 URLs) shown from the home screen's
+    // helper tile, played in-app — see FullScreenHelperVideoPlayer.
+    @GET("api/auth/android/helper-videos")
+    suspend fun getHelperVideos(): Response<List<String>>
+
     // Flat key -> Urdu display text map mirroring the entries in res/values/strings.xml, so
     // in-app text can be updated from the backend without an app release. See RemoteStringsStore.
     @GET("api/auth/android/getmessagesvalue")
@@ -223,7 +236,8 @@ data class GpsLogRequest(
     val speed: Double,
     val heading: Double,
     val altitude: Double,
-    val mockLocationDetection: Boolean
+    val mockLocationDetection: Boolean,
+    val timestamp: Long
 )
 
 data class StartFarmingProviderRequest(

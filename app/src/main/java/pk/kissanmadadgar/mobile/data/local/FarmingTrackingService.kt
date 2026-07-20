@@ -23,6 +23,7 @@ data class LocationMetric(
     val altitude: Double,
     val speed: Float,
     val bearing: Float,
+    val accuracy: Float,
     val isMock: Boolean,
     val timestamp: Long
 )
@@ -264,9 +265,11 @@ class FarmingTrackingService : Service() {
     }
 
     private fun startLocationTracking() {
-        val trackingIntervalMs = 5000L // 5 seconds
-        val request = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, trackingIntervalMs)
-            .setMinUpdateIntervalMillis(trackingIntervalMs / 2)
+        val request = LocationRequest.Builder(
+            Priority.PRIORITY_HIGH_ACCURACY,
+            pk.kissanmadadgar.mobile.core.AppConfig.GPS_TRACKING_INTERVAL_MS
+        )
+            .setMinUpdateIntervalMillis(pk.kissanmadadgar.mobile.core.AppConfig.GPS_TRACKING_MIN_UPDATE_INTERVAL_MS)
             .build()
 
         locationCallback = object : LocationCallback() {
@@ -304,6 +307,7 @@ class FarmingTrackingService : Service() {
             altitude = loc.altitude,
             speed = loc.speed,
             bearing = loc.bearing,
+            accuracy = loc.accuracy,
             isMock = isMock,
             timestamp = System.currentTimeMillis()
         )

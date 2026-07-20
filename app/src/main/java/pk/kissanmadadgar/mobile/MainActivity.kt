@@ -351,7 +351,19 @@ class MainActivity : ComponentActivity() {
                                         navController.navigate(Screen.RegisterAgriculturalMachinery.route)
                                     },
                                     onNavigateToNotifications = {
-                                        navController.navigate(Screen.Notifications.route)
+                                        // TEMP DEBUG (BellCrashDebug): logging every tap plus the
+                                        // back-stack state right before navigating, to pin down
+                                        // the still-unexplained white screen now that
+                                        // launchSingleTop alone didn't fix it. Remove once solved.
+                                        val stackBefore = navController.currentBackStack.value.map { it.destination.route }
+                                        android.util.Log.d("BellCrashDebug", "bell tapped at ${System.currentTimeMillis()}; backstack before=$stackBefore; currentDest=${navController.currentDestination?.route}")
+                                        if (navController.currentDestination?.route == Screen.FarmerHome.route) {
+                                            navController.navigate(Screen.Notifications.route) {
+                                                launchSingleTop = true
+                                            }
+                                        }
+                                        val stackAfter = navController.currentBackStack.value.map { it.destination.route }
+                                        android.util.Log.d("BellCrashDebug", "after navigate(); backstack after=$stackAfter")
                                     },
                                     onNavigateToGovernmentSchemes = {
                                         navController.navigate(Screen.GovernmentSchemes.route)
@@ -362,13 +374,29 @@ class MainActivity : ComponentActivity() {
                             composable(Screen.Notifications.route) {
                                 NotificationsScreen(
                                     viewModel = viewModel,
-                                    onBack = { navController.popBackStack() },
+                                    onBack = {
+                                        // TEMP DEBUG (BellCrashDebug): mirrors the bell-tap logging
+                                        // above, on the other side of the nav — pinning down whether
+                                        // the white screen comes from the back press itself. Remove
+                                        // once solved.
+                                        val stackBefore = navController.currentBackStack.value.map { it.destination.route }
+                                        android.util.Log.d("BellCrashDebug", "back pressed at ${System.currentTimeMillis()}; backstack before=$stackBefore; currentDest=${navController.currentDestination?.route}")
+                                        val popped = if (navController.currentDestination?.route == Screen.Notifications.route) {
+                                            navController.popBackStack()
+                                        } else {
+                                            false
+                                        }
+                                        val stackAfter = navController.currentBackStack.value.map { it.destination.route }
+                                        android.util.Log.d("BellCrashDebug", "after popBackStack(); popped=$popped; backstack after=$stackAfter; currentDest=${navController.currentDestination?.route}")
+                                    },
                                     onNavigateToBooking = {
                                         // Land back on the Bookings tab (index 2) so
                                         // FarmerBookingsTab is actually composed and its
                                         // notificationBookingId effect can run.
                                         viewModel.setSelectedTab(2)
-                                        navController.popBackStack()
+                                        if (navController.currentDestination?.route == Screen.Notifications.route) {
+                                            navController.popBackStack()
+                                        }
                                     }
                                 )
                             }

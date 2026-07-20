@@ -47,7 +47,22 @@ fun NotificationsScreen(
     val isFirst = currentPage == 0
     val context = LocalContext.current
 
+    // TEMP DEBUG (BellCrashDebug): logs exactly once per distinct instance of this composable
+    // (first composition + teardown), to see how many instances actually get created and whether
+    // they overlap, since the white-screen repro leaves no OS-level trace. Remove once solved.
+    val instanceId = remember { System.currentTimeMillis() }
+    remember(instanceId) {
+        android.util.Log.d("BellCrashDebug", "NotificationsScreen COMPOSED instance=$instanceId")
+        instanceId
+    }
+    DisposableEffect(instanceId) {
+        onDispose {
+            android.util.Log.d("BellCrashDebug", "NotificationsScreen DISPOSED instance=$instanceId")
+        }
+    }
+
     LaunchedEffect(currentPage) {
+        android.util.Log.d("BellCrashDebug", "NotificationsScreen instance=$instanceId fetchNotifications page=$currentPage")
         viewModel.fetchNotifications(page = currentPage, append = false)
     }
 

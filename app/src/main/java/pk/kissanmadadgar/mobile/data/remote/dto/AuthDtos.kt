@@ -167,7 +167,30 @@ data class AvailableMachinesResponseDto(
     @SerializedName("totalPages") val totalPages: Int?,
     @SerializedName("page") val page: Int?,
     @SerializedName("size") val size: Int?,
-    @SerializedName("content") val content: List<AvailableMachineDto>?
+    @SerializedName("content") val content: List<AvailableMachineDto>?,
+    // Server-computed total booking count for the calling account — 0 for a guest-token
+    // request, the real count otherwise. Replaces the old client-side Room-count approach
+    // (which under-counted since it only reflected whichever booking statuses had already been
+    // fetched into the local cache this session).
+    @SerializedName("myBookingCount") val myBookingCounter: Int? = null
+)
+
+data class RouteRequestDto(
+    @SerializedName("originLat") val originLat: Double,
+    @SerializedName("originLng") val originLng: Double,
+    @SerializedName("destLat") val destLat: Double,
+    @SerializedName("destLng") val destLng: Double
+)
+
+// status is "OK" for a real road route (polyline present) or "FALLBACK" when the backend
+// couldn't get one from OpenRouteService (no route found, key issue, rate limit, timeout) —
+// distanceMeters/estimatedMinutes are still populated (straight-line) in the FALLBACK case,
+// only polyline is null.
+data class RouteResponseDto(
+    @SerializedName("status") val status: String?,
+    @SerializedName("distanceMeters") val distanceMeters: Long?,
+    @SerializedName("polyline") val polyline: String?,
+    @SerializedName("estimatedMinutes") val estimatedMinutes: Int?
 )
 
 data class MyMachineDto(

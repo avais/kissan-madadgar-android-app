@@ -32,6 +32,8 @@ interface AuthRepository {
         keyword: String? = null
     ): Result<PaginatedMachinery>
     suspend fun getMyMachines(page: Int = 0, size: Int = 10): Result<MyMachinesResponseDto>
+    suspend fun getRoute(originLat: Double, originLng: Double, destLat: Double, destLng: Double): Result<RouteInfo>
+    suspend fun getHelperVideos(): Result<List<String>>
     suspend fun updateProfile(name: String, cnic: String, address: String, districtId: Long?, mobile: String): Result<Unit>
     suspend fun createRentalBooking(
         fleetId: Long?,

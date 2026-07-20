@@ -120,6 +120,8 @@
     <string name="content_description_search_this_area">اس علاقے میں تلاش کریں</string>
     <string name="map_loading_text">نقشہ لوڈ ہو رہا ہے…</string>
     <string name="search_center_marker_title">فاصلہ یہاں سے ناپا گیا ہے</string>
+    <string name="route_loading_text">راستہ معلوم کیا جا رہا ہے…</string>
+    <string name="route_estimated_minutes_format">تقریباً %1$d منٹ</string>
     <string name="content_description_close_popup">بند کریں</string>
     <string name="hourly_rate_format">کرایہ: %1$d روپے</string>
     <string name="gps_active_label">جی پی ایس آن ہے</string>
@@ -242,10 +244,12 @@
     <string name="login_success_toast">لاگ ان کامیاب ہو گیا</string>
     <string name="booking_success_toast">بکنگ کامیابی سے درج ہو گئی ہے</string>
     <string name="machinery_registration_toast">مشینری رجسٹریشن کی درخواست بھیج دی گئی ہے</string>
+    <string name="press_back_again_to_exit">ایپ بند کرنے کے لیے دوبارہ بیک بٹن دبائیں</string>
 
     <!-- Auth Required Screen Overlay -->
     <string name="auth_req_title">اجازت درکار ہے</string>
     <string name="auth_req_desc">سروس فراہم کنندہ سے رابطہ کرنے کے لیے براہ کرم اپنا فون نمبر درج کریں۔</string>
+    <string name="auth_req_narration">سروس فراہم کنندہ سے رابطہ کرنے کے لیے لاگ ان کرنا ضروری ہے۔ براہ کرم نیچے دیے گئے خانے میں اپنا موبائل نمبر درج کریں اور \'موبائل نمبر پر کوڈ حاصل کریں\' کا بٹن دبائیں۔ آپ کو واٹس ایپ پر ایک تصدیقی کوڈ موصول ہوگا، وہ کوڈ درج کر کے آپ سروس فراہم کنندہ سے رابطہ کر سکیں گے۔</string>
     <string name="auth_req_phone_label">فون نمبر</string>
     <string name="auth_req_whatsapp">واٹس ایپ</string>
     <string name="auth_req_sms">ایس ایم ایس</string>
@@ -433,8 +437,15 @@
     <string name="content_description_listen_audio">آڈیو معلومات</string>
     <string name="content_description_mascot">کسان مددگار مسکوٹ</string>
     <string name="active_available_machines">دستیاب اور فعال مشینیں</string>
-    <string name="schemes_card_title">محکمہ زراعت کی اسکیمیں</string>
+    <string name="schemes_card_title">زرعی اسکیمیں</string>
     <string name="schemes_card_subtitle">حکومتی سبسڈی، گرین ٹریکٹر اور دیگر فعال پروگرام</string>
+    <string name="schemes_card_narration">محکمہ زراعت کی زرعی اسکیموں اور حکومتی سبسڈی کی معلومات دیکھنے کے لیے یہاں ٹیپ کریں۔</string>
+    <string name="home_helper_video_title">استعمال کا طریقہ</string>
+    <string name="home_helper_video_narration">ایپ کو استعمال کرنے کا طریقہ ویڈیو کی صورت میں دیکھنے کے لیے یہاں ٹیپ کریں۔</string>
+    <string name="helper_video_unavailable">ابھی ویڈیوز دستیاب نہیں ہیں۔</string>
+    <string name="helper_video_open_failed">ویڈیو کھولنے میں ناکامی۔</string>
+    <string name="helper_video_picker_title">ویڈیو منتخب کریں</string>
+    <string name="helper_video_item_format">ویڈیو %1$d</string>
     <string name="no_machinery_found_title">کوئی مشینری نہیں ملی</string>
     <string name="no_machinery_found_desc">آپ کے منتخب کردہ معیار کے مطابق کوئی مشینری دستیاب نہیں ہے۔</string>
     <string name="register_dialog_title">زرعی مشین رجسٹر کریں؟</string>
@@ -541,4 +552,11 @@
     <string name="update_ready_message">نیا ورژن ڈاؤن لوڈ ہو گیا ہے۔ اسے لاگو کرنے کے لیے ابھی دوبارہ شروع کریں۔</string>
     <string name="update_ready_confirm_btn">دوبارہ شروع کریں</string>
     <string name="update_ready_dismiss_btn">بعد میں</string>
+
+    <!-- Location-disabled dialog (replaces the OS's own English "location off" prompt by
+         checking status before requesting location, rather than trying to relabel a system UI). -->
+    <string name="location_disabled_title">لوکیشن آن کریں</string>
+    <string name="location_disabled_desc">کیو آر کوڈ استعمال کرنے کے لیے فون کی لوکیشن (جی پی ایس) آن ہونا ضروری ہے۔ براہ کرم لوکیشن آن کریں۔</string>
+    <string name="location_disabled_open_settings">سیٹنگز کھولیں</string>
+    <string name="location_disabled_cancel">منسوخ</string>
 </resources>

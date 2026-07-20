@@ -207,9 +207,38 @@ class AuthRepositoryImpl @Inject constructor(
                 totalPages = resolvedTotalPages,
                 totalElements = (responseDto.totalElements ?: machines.size).toLong(),
                 isLast = resolvedCurrentPage >= resolvedTotalPages - 1,
-                currentPage = resolvedCurrentPage
+                currentPage = resolvedCurrentPage,
+                myBookingCounter = responseDto.myBookingCounter ?: 0
             )
         }
+    }
+
+    override suspend fun getRoute(
+        originLat: Double,
+        originLng: Double,
+        destLat: Double,
+        destLng: Double
+    ): Result<pk.kissanmadadgar.mobile.domain.model.RouteInfo> {
+        val token = sessionManager.getAuthToken() ?: sessionManager.getGuestToken() ?: ""
+        val authHeader = if (token.startsWith("Bearer ")) token else "Bearer $token"
+        val result = safeApiCall {
+            authApiService.getRoute(
+                authHeader,
+                pk.kissanmadadgar.mobile.data.remote.dto.RouteRequestDto(originLat, originLng, destLat, destLng)
+            )
+        }
+        return result.map { responseDto ->
+            pk.kissanmadadgar.mobile.domain.model.RouteInfo(
+                isRoadRoute = responseDto.status == "OK" && !responseDto.polyline.isNullOrBlank(),
+                distanceMeters = responseDto.distanceMeters ?: 0L,
+                encodedPolyline = responseDto.polyline,
+                estimatedMinutes = responseDto.estimatedMinutes ?: 0
+            )
+        }
+    }
+
+    override suspend fun getHelperVideos(): Result<List<String>> {
+        return safeApiCall { authApiService.getHelperVideos() }
     }
 
     override suspend fun getMyMachines(page: Int, size: Int): Result<MyMachinesResponseDto> {

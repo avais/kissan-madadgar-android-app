@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AccessTime
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.LocationCity
 import androidx.compose.material.icons.filled.LocationOn
@@ -52,13 +53,16 @@ import com.google.maps.android.compose.MapProperties
 import com.google.maps.android.compose.MapUiSettings
 import com.google.maps.android.compose.Marker
 import com.google.maps.android.compose.MarkerState
+import com.google.maps.android.compose.Polyline
 import com.google.maps.android.compose.rememberCameraPositionState
 import com.google.maps.android.compose.clustering.Clustering
 import com.google.maps.android.clustering.ClusterItem
+import com.google.maps.android.PolyUtil
 import kotlinx.coroutines.launch
 import pk.kissanmadadgar.mobile.R
 import pk.kissanmadadgar.mobile.core.theme.AgriGreenPrimary
 import pk.kissanmadadgar.mobile.domain.model.Machinery
+import pk.kissanmadadgar.mobile.domain.model.RouteInfo
 import pk.kissanmadadgar.mobile.presentation.MainViewModel
 import java.util.Locale
 
@@ -259,6 +263,8 @@ private fun createSearchCenterBitmapDescriptor(context: android.content.Context)
 private fun MachineryPopupCard(
     machinery: Machinery,
     isSpeaking: Boolean,
+    routeInfo: RouteInfo? = null,
+    isRouteLoading: Boolean = false,
     onToggleNarration: () -> Unit,
     onClick: () -> Unit,
     onBook: () -> Unit,
@@ -359,6 +365,46 @@ private fun MachineryPopupCard(
                     Icon(imageVector = Icons.Default.LocationCity, contentDescription = null, tint = Color.DarkGray, modifier = Modifier.size(15.dp))
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(text = machinery.districtUr, fontSize = 13.sp, color = Color.DarkGray)
+                }
+            }
+
+            // Road-connection distance/time — big, icon-led, simple wording, since this app's
+            // users have low digital literacy: no raw numbers without an icon/unit next to them.
+            if (isRouteLoading || routeInfo != null) {
+                Spacer(modifier = Modifier.height(8.dp))
+                if (isRouteLoading) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        CircularProgressIndicator(modifier = Modifier.size(14.dp), strokeWidth = 2.dp, color = AgriGreenPrimary)
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(text = stringResource(id = R.string.route_loading_text), fontSize = 13.sp, color = Color.DarkGray)
+                    }
+                } else if (routeInfo != null) {
+                    val accentColor = if (routeInfo.isRoadRoute) AgriGreenPrimary else Color(0xFFFF6F00)
+                    Row(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(accentColor.copy(alpha = 0.1f))
+                            .padding(horizontal = 10.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(imageVector = Icons.Default.LocationOn, contentDescription = null, tint = accentColor, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = String.format(Locale.US, "%.1f کلومیٹر", routeInfo.distanceMeters / 1000.0),
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.Black
+                        )
+                        Spacer(modifier = Modifier.width(10.dp))
+                        Icon(imageVector = Icons.Default.AccessTime, contentDescription = null, tint = accentColor, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = stringResource(id = R.string.route_estimated_minutes_format, routeInfo.estimatedMinutes),
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.Black
+                        )
+                    }
                 }
             }
 
@@ -496,6 +542,46 @@ internal fun ClusteredMachineryGoogleMap(
     var pendingAreaSearch by remember { mutableStateOf<LatLng?>(null) }
     val isSearchingArea by viewModel.isLoadingAvailableMachinery.collectAsState()
 
+    // Road-connection line for whichever machinery marker is currently tapped, fetched on
+    // demand only for that one machinery (not proactively for every visible pin, to keep
+    // routing-API usage down). Reference point is the search-center marker if the user has
+    // already used "search this area" at least once, otherwise the user's own live location —
+    // captured once at the moment a marker is tapped (selectedMachinery is the only key below)
+    // so a background GPS tick while the popup is open doesn't keep re-triggering fetches.
+    var routeInfo by remember { mutableStateOf<RouteInfo?>(null) }
+    var isRouteLoading by remember { mutableStateOf(false) }
+    var routePoints by remember { mutableStateOf<List<LatLng>>(emptyList()) }
+    LaunchedEffect(selectedMachinery) {
+        val machinery = selectedMachinery
+        if (machinery == null) {
+            routeInfo = null
+            routePoints = emptyList()
+            isRouteLoading = false
+            return@LaunchedEffect
+        }
+        val destination = if (cameraUnderUserControl) searchedCenter else userLatLng
+        isRouteLoading = true
+        routeInfo = null
+        routePoints = emptyList()
+        val origin = LatLng(machinery.latitude, machinery.longitude)
+        val fetched = viewModel.getRoute(origin.latitude, origin.longitude, destination.latitude, destination.longitude)
+        routeInfo = fetched
+        // Only ever draw a line for a genuine road route — a straight "as the crow flies" dashed
+        // line across fields/buildings read as broken/awkward, so the fallback case (no route
+        // found, or a malformed polyline) draws nothing at all. The distance/time chip in the
+        // popup card still shows in that case, just without a line on the map.
+        routePoints = if (fetched != null && fetched.isRoadRoute && !fetched.encodedPolyline.isNullOrBlank()) {
+            try {
+                PolyUtil.decode(fetched.encodedPolyline)
+            } catch (e: Exception) {
+                emptyList()
+            }
+        } else {
+            emptyList()
+        }
+        isRouteLoading = false
+    }
+
     LaunchedEffect(isMapLoaded, machineryList) {
         if (!isMapLoaded || cameraUnderUserControl) return@LaunchedEffect
         val boundsBuilder = LatLngBounds.Builder()
@@ -509,6 +595,24 @@ internal fun ClusteredMachineryGoogleMap(
             }
         } catch (e: Exception) {
             cameraPositionState.position = CameraPosition.fromLatLngZoom(userLatLng, 13f)
+        }
+    }
+
+    // Once cameraUnderUserControl is true, the effect above stops re-fitting (by design, so a
+    // subsequent filter change doesn't yank the camera back to the user's own position — see its
+    // comment). But a fresh batch of results from a NEW "search this area" tap still needs to
+    // bring itself into view, or the user has no way to tell whether anything new loaded without
+    // manually panning around to look — fits to just the new results plus searchedCenter (not
+    // userLatLng, which would fight the user's own pan) whenever a search-area fetch lands.
+    LaunchedEffect(machineryList) {
+        if (!cameraUnderUserControl || machineryList.isEmpty()) return@LaunchedEffect
+        val boundsBuilder = LatLngBounds.Builder()
+        boundsBuilder.include(searchedCenter)
+        machineryList.forEach { boundsBuilder.include(LatLng(it.latitude, it.longitude)) }
+        try {
+            cameraPositionState.animate(CameraUpdateFactory.newLatLngBounds(boundsBuilder.build(), 140))
+        } catch (e: Exception) {
+            // Keep whatever camera position is already showing.
         }
     }
 
@@ -577,6 +681,18 @@ internal fun ClusteredMachineryGoogleMap(
                     )
                 }
 
+                // Road-connection line to whichever marker is selected — only ever drawn for a
+                // genuine road route (routePoints stays empty in the fallback/no-route case, see
+                // the LaunchedEffect(selectedMachinery) above, so there is deliberately no straight
+                // "as the crow flies" line drawn across fields/buildings when ORS can't find one).
+                if (routePoints.isNotEmpty()) {
+                    Polyline(
+                        points = routePoints,
+                        color = AgriGreenPrimary,
+                        width = 10f
+                    )
+                }
+
                 Clustering(
                     items = clusterItems,
                     onClusterItemClick = { item ->
@@ -619,15 +735,21 @@ internal fun ClusteredMachineryGoogleMap(
         }
 
         if (onSearchThisArea != null) {
-            pendingAreaSearch?.let { target ->
+            // Kept visible while isSearchingArea is true even after pendingAreaSearch is cleared
+            // below — otherwise the chip (and the loading spinner inside it) disappeared the
+            // instant it was tapped, before the fetch had even started, so the user never actually
+            // saw a loading state for the search they just triggered.
+            if (pendingAreaSearch != null || isSearchingArea) {
                 SearchThisAreaChip(
                     zoomedInEnough = cameraPositionState.position.zoom >= MIN_AREA_SEARCH_ZOOM,
                     isLoading = isSearchingArea,
                     onClick = {
-                        cameraUnderUserControl = true
-                        searchedCenter = target
+                        pendingAreaSearch?.let { target ->
+                            cameraUnderUserControl = true
+                            searchedCenter = target
+                            onSearchThisArea(target.latitude, target.longitude)
+                        }
                         pendingAreaSearch = null
-                        onSearchThisArea(target.latitude, target.longitude)
                     },
                     modifier = Modifier
                         .align(Alignment.TopCenter)
@@ -640,6 +762,8 @@ internal fun ClusteredMachineryGoogleMap(
             MachineryPopupCard(
                 machinery = machinery,
                 isSpeaking = isSpeaking,
+                routeInfo = routeInfo,
+                isRouteLoading = isRouteLoading,
                 onToggleNarration = {
                     if (isSpeaking) {
                         pk.kissanmadadgar.mobile.data.local.NarrationManager.stop()

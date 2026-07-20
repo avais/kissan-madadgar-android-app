@@ -52,6 +52,15 @@ import com.google.android.gms.location.LocationServices
 import java.io.File
 import java.io.FileOutputStream
 
+// Whether the device's location services are on at all (any provider), regardless of whether
+// this app has location permission — used to gate the QR show/scan flows, which both rely on a
+// real device location fix for their proximity check.
+fun isDeviceLocationEnabled(context: android.content.Context): Boolean {
+    val locationManager = context.getSystemService(android.content.Context.LOCATION_SERVICE) as? android.location.LocationManager
+        ?: return false
+    return androidx.core.location.LocationManagerCompat.isLocationEnabled(locationManager)
+}
+
 @OptIn(ExperimentalMaterial3Api::class, androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 fun FarmerBookingsTab(viewModel: MainViewModel) {
@@ -105,10 +114,18 @@ fun FarmerBookingsTab(viewModel: MainViewModel) {
 
                 if (hasFine || hasCoarse) {
                     try {
-                        fusedLocationClient.lastLocation.addOnSuccessListener { loc ->
+                        // getCurrentLocation() forces a fresh fix instead of returning whatever
+                        // is sitting in Play Services' location cache (which is also what the
+                        // tracking service's very first periodic callback tends to replay) —
+                        // otherwise a quick start-then-stop could log identical start/end points.
+                        val cancellationTokenSource = com.google.android.gms.tasks.CancellationTokenSource()
+                        fusedLocationClient.getCurrentLocation(
+                            com.google.android.gms.location.Priority.PRIORITY_HIGH_ACCURACY,
+                            cancellationTokenSource.token
+                        ).addOnSuccessListener { loc ->
                             val lat = loc?.latitude ?: 0.0
                             val lng = loc?.longitude ?: 0.0
-                            android.util.Log.d("StartFarmingFlow", "Fetched location: lat=$lat, lng=$lng. Submitting...")
+                            android.util.Log.d("StartFarmingFlow", "Fetched fresh location: lat=$lat, lng=$lng. Submitting...")
                             viewModel.enqueueFarmingStart(target.id, imageFile.absolutePath, lat, lng, showStartOutcomeToast)
                         }.addOnFailureListener { err ->
                             android.util.Log.w("StartFarmingFlow", "Failed to fetch location: ${err.message}. Submitting with fallback 0.0...")
@@ -140,7 +157,21 @@ fun FarmerBookingsTab(viewModel: MainViewModel) {
     var lastLatitude by remember { mutableStateOf<Double?>(null) }
     var lastLongitude by remember { mutableStateOf<Double?>(null) }
 
+    // QR proximity validation (both showing and scanning the code) depends on a real device
+    // location fix — if location services are off system-wide, that check would silently fail
+    // or use a stale/last-known position. Gate both entry points on this before doing anything
+    // else they already did.
+    var showLocationDisabledDialog by remember { mutableStateOf(false) }
+
     LaunchedEffect(Unit) {
+        // Requesting PRIORITY_HIGH_ACCURACY updates while system location is off triggers the
+        // OS/Play-Services' own native "turn on location" prompt (in whatever language the
+        // device's system locale is set to, not this app's Urdu — outside app control). Checking
+        // first and showing our own Urdu dialog instead means that system prompt never fires.
+        if (!pk.kissanmadadgar.mobile.presentation.screens.isDeviceLocationEnabled(context)) {
+            showLocationDisabledDialog = true
+            return@LaunchedEffect
+        }
         try {
             fusedLocationClient.lastLocation.addOnSuccessListener { loc ->
                 if (loc != null) {
@@ -153,7 +184,7 @@ fun FarmerBookingsTab(viewModel: MainViewModel) {
                 2000
             ).setMinUpdateIntervalMillis(1000)
              .build()
-             
+
             fusedLocationClient.requestLocationUpdates(
                 locationRequest,
                 object : com.google.android.gms.location.LocationCallback() {
@@ -544,21 +575,29 @@ fun FarmerBookingsTab(viewModel: MainViewModel) {
                             }
                         },
                         onScanQrClick = {
-                            val hasCamera = androidx.core.content.ContextCompat.checkSelfPermission(context, android.Manifest.permission.CAMERA) == android.content.pm.PackageManager.PERMISSION_GRANTED
-                            if (hasCamera) {
-                                bookingToStartDirectly = booking
-                                bookingForQrStart = booking
-                                showQrScannerForStartFlow = true
+                            if (!pk.kissanmadadgar.mobile.presentation.screens.isDeviceLocationEnabled(context)) {
+                                showLocationDisabledDialog = true
                             } else {
-                                bookingForQrPermissionStart = booking
-                                cameraPermissionLauncherForQrStart.launch(android.Manifest.permission.CAMERA)
+                                val hasCamera = androidx.core.content.ContextCompat.checkSelfPermission(context, android.Manifest.permission.CAMERA) == android.content.pm.PackageManager.PERMISSION_GRANTED
+                                if (hasCamera) {
+                                    bookingToStartDirectly = booking
+                                    bookingForQrStart = booking
+                                    showQrScannerForStartFlow = true
+                                } else {
+                                    bookingForQrPermissionStart = booking
+                                    cameraPermissionLauncherForQrStart.launch(android.Manifest.permission.CAMERA)
+                                }
                             }
                         },
                         onShowQrClick = {
-                            bookingForShowingQrCode = booking
-                            showQrDialog = true
+                            if (!pk.kissanmadadgar.mobile.presentation.screens.isDeviceLocationEnabled(context)) {
+                                showLocationDisabledDialog = true
+                            } else {
+                                bookingForShowingQrCode = booking
+                                showQrDialog = true
+                            }
                         },
-                        onStopFarmingActivity = { localPath, lat, lng, accuracy, speed, heading, altitude, isMock ->
+                        onStopFarmingActivity = { localPath, lat, lng, accuracy, speed, heading, altitude, isMock, totalServiceTime ->
                             viewModel.enqueueFarmingComplete(
                                 bookingId = booking.id,
                                 localFilePath = localPath,
@@ -568,7 +607,8 @@ fun FarmerBookingsTab(viewModel: MainViewModel) {
                                 speed = speed,
                                 heading = heading,
                                 altitude = altitude,
-                                isMock = isMock
+                                isMock = isMock,
+                                totalServiceTime = totalServiceTime
                             ) { outcome ->
                                 val msg = if (outcome == pk.kissanmadadgar.mobile.data.remote.UploadOutcome.SYNCED) {
                                     "کاشتکاری مکمل کرنے کا ڈیٹا کامیابی سے اپلوڈ ہو گیا ہے۔"
@@ -636,6 +676,27 @@ fun FarmerBookingsTab(viewModel: MainViewModel) {
                 handleDirectPhotoCaptured(bitmap)
             },
             userName = currentUser?.fullName ?: "کاشتکار"
+        )
+    }
+
+    if (showLocationDisabledDialog) {
+        AlertDialog(
+            onDismissRequest = { showLocationDisabledDialog = false },
+            title = { Text(text = stringResource(id = R.string.location_disabled_title)) },
+            text = { Text(text = stringResource(id = R.string.location_disabled_desc)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    showLocationDisabledDialog = false
+                    context.startActivity(android.content.Intent(android.provider.Settings.ACTION_LOCATION_SOURCE_SETTINGS))
+                }) {
+                    Text(text = stringResource(id = R.string.location_disabled_open_settings), color = AgriGreenPrimary, fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showLocationDisabledDialog = false }) {
+                    Text(text = stringResource(id = R.string.location_disabled_cancel))
+                }
+            }
         )
     }
 
