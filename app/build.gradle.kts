@@ -135,6 +135,12 @@ dependencies {
     implementation("com.google.mlkit:barcode-scanning:17.2.0")
     implementation("com.google.zxing:core:3.5.3")
 
+    // In-app video player (Media3 ExoPlayer) for the "how to use the app" helper videos — the
+    // backend now serves them as direct MP4 files rather than YouTube links, so playback is
+    // native ExoPlayer instead of an embedded YouTube WebView.
+    implementation("androidx.media3:media3-exoplayer:1.2.1")
+    implementation("androidx.media3:media3-ui:1.2.1")
+
     // Testing
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.1.5")
